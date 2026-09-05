@@ -1,1 +1,2929 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
 
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#0f766e">
+
+    <title>SOLFIN - Gestión de préstamos y cobranzas</title>
+
+    <!-- =====================================================
+         SUPABASE
+    ====================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+
+        /* =====================================================
+           VARIABLES
+        ====================================================== */
+
+        :root {
+            --primary: #0f766e;
+            --primary-dark: #115e59;
+            --primary-light: #ccfbf1;
+
+            --secondary: #f59e0b;
+            --secondary-light: #fef3c7;
+
+            --success: #16a34a;
+            --danger: #dc2626;
+            --info: #2563eb;
+
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --text: #172033;
+            --muted: #64748b;
+            --border: #e2e8f0;
+
+            --sidebar: #102a43;
+
+            --radius: 14px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family:
+                Inter,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                Arial,
+                sans-serif;
+
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        /* =====================================================
+           LOGIN
+        ====================================================== */
+
+        #authScreen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                radial-gradient(circle at top right,
+                    rgba(15,118,110,.20),
+                    transparent 35%),
+                radial-gradient(circle at bottom left,
+                    rgba(245,158,11,.18),
+                    transparent 35%),
+                #f1f5f9;
+
+            padding: 20px;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 430px;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 22px;
+            padding: 35px;
+            box-shadow:
+                0 20px 60px rgba(15, 23, 42, .12);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-icon {
+            width: 70px;
+            height: 70px;
+
+            margin: 0 auto 12px;
+
+            border-radius: 50%;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                linear-gradient(135deg,
+                    var(--secondary),
+                    #f97316);
+
+            font-size: 38px;
+
+            box-shadow:
+                0 10px 25px rgba(245,158,11,.30);
+        }
+
+        .logo h1 {
+            font-size: 34px;
+            letter-spacing: 2px;
+            color: var(--primary);
+        }
+
+        .logo p {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            margin-bottom: 7px;
+        }
+
+        .auth-subtitle {
+            color: var(--muted);
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 17px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 14px;
+
+            border: 1px solid var(--border);
+            border-radius: 10px;
+
+            outline: none;
+            background: white;
+
+            transition: .2s;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+
+            box-shadow:
+                0 0 0 3px rgba(15,118,110,.10);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+
+            padding: 12px 17px;
+
+            font-weight: 600;
+
+            transition: .2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .auth-switch button {
+            border: none;
+            background: none;
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .message {
+            padding: 11px 13px;
+            border-radius: 9px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.error {
+            display: block;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .message.success {
+            display: block;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        /* =====================================================
+           APP
+        ====================================================== */
+
+        #appScreen {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .app-layout {
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* =====================================================
+           SIDEBAR
+        ====================================================== */
+
+        .sidebar {
+            width: 250px;
+            background: var(--sidebar);
+            color: white;
+
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+
+            display: flex;
+            flex-direction: column;
+
+            z-index: 100;
+        }
+
+        .sidebar-logo {
+            padding: 25px 20px;
+
+            border-bottom:
+                1px solid rgba(255,255,255,.08);
+        }
+
+        .sidebar-logo-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-sun {
+            width: 40px;
+            height: 40px;
+
+            border-radius: 50%;
+
+            background: var(--secondary);
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 22px;
+        }
+
+        .sidebar-logo h2 {
+            font-size: 22px;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-logo small {
+            color: #94a3b8;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .nav {
+            padding: 15px 10px;
+            flex: 1;
+        }
+
+        .nav button {
+            width: 100%;
+
+            border: none;
+            background: transparent;
+
+            color: #cbd5e1;
+
+            text-align: left;
+
+            padding: 12px 14px;
+
+            border-radius: 9px;
+
+            margin-bottom: 4px;
+
+            font-size: 14px;
+
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav button:hover,
+        .nav button.active {
+            background: rgba(255,255,255,.10);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 22px;
+            text-align: center;
+        }
+
+        .sidebar-bottom {
+            padding: 15px;
+            border-top:
+                1px solid rgba(255,255,255,.08);
+        }
+
+        .user-info {
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #cbd5e1;
+            word-break: break-word;
+        }
+
+        .logout-btn {
+            width: 100%;
+            background: rgba(220,38,38,.15);
+            color: #fecaca;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* =====================================================
+           MAIN
+        ====================================================== */
+
+        .main {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            min-height: 100vh;
+        }
+
+        .topbar {
+            height: 70px;
+            background: white;
+
+            border-bottom: 1px solid var(--border);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 30px;
+
+            position: sticky;
+            top: 0;
+
+            z-index: 50;
+        }
+
+        .topbar-title {
+            font-size: 21px;
+            font-weight: 700;
+        }
+
+        .topbar-user {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* =====================================================
+           SECTIONS
+        ====================================================== */
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 25px;
+            gap: 15px;
+        }
+
+        .section-header h2 {
+            font-size: 25px;
+        }
+
+        .section-header p {
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* =====================================================
+           DASHBOARD CARDS
+        ====================================================== */
+
+        .stats-grid {
+            display: grid;
+
+            grid-template-columns:
+                repeat(4, minmax(0, 1fr));
+
+            gap: 18px;
+
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: var(--radius);
+
+            padding: 20px;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-card h4 {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 7px;
+        }
+
+        .stat-card strong {
+            font-size: 25px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+
+            border-radius: 12px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 22px;
+
+            background: var(--primary-light);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px;
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+        }
+
+        /* =====================================================
+           CLIENTES
+        ====================================================== */
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .search {
+            flex: 1;
+        }
+
+        .search input {
+            width: 100%;
+            padding: 12px 14px;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .table-container {
+            background: white;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: var(--radius);
+
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 14px 16px;
+
+            border-bottom:
+                1px solid var(--border);
+
+            text-align: left;
+
+            font-size: 14px;
+        }
+
+        th {
+            color: var(--muted);
+            background: #f8fafc;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            padding: 50px 20px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .empty-icon {
+            font-size: 45px;
+            margin-bottom: 10px;
+        }
+
+        /* =====================================================
+           MODAL
+        ====================================================== */
+
+        .modal {
+            position: fixed;
+
+            inset: 0;
+
+            background:
+                rgba(15,23,42,.55);
+
+            display: none;
+
+            align-items: center;
+            justify-content: center;
+
+            padding: 20px;
+
+            z-index: 500;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 650px;
+
+            max-height: 90vh;
+
+            overflow-y: auto;
+
+            background: white;
+
+            border-radius: 17px;
+
+            padding: 25px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            width: 35px;
+            height: 35px;
+
+            border: none;
+            border-radius: 50%;
+
+            background: #f1f5f9;
+
+            font-size: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+
+            margin-top: 20px;
+        }
+
+        /* =====================================================
+           PLACEHOLDER MODULES
+        ====================================================== */
+
+        .module-placeholder {
+            background: white;
+
+            border:
+                1px solid var(--border);
+
+            border-radius: var(--radius);
+
+            padding: 60px 30px;
+
+            text-align: center;
+        }
+
+        .module-placeholder .big-icon {
+            font-size: 55px;
+            margin-bottom: 15px;
+        }
+
+        .module-placeholder h3 {
+            margin-bottom: 8px;
+        }
+
+        .module-placeholder p {
+            color: var(--muted);
+            max-width: 550px;
+            margin: auto;
+        }
+
+        /* =====================================================
+           RESPONSIVE
+        ====================================================== */
+
+        .mobile-menu {
+            display: none;
+
+            border: none;
+            background: transparent;
+
+            font-size: 24px;
+        }
+
+        @media (max-width: 1000px) {
+
+            .stats-grid {
+                grid-template-columns:
+                    repeat(2, minmax(0, 1fr));
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 750px) {
+
+            .sidebar {
+                transform: translateX(-100%);
+                transition: .25s;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .mobile-menu {
+                display: block;
+            }
+
+            .topbar {
+                padding: 0 15px;
+            }
+
+            .content {
+                padding: 18px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-grid .full {
+                grid-column: auto;
+            }
+
+            .section-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .toolbar {
+                flex-direction: column;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+
+<!-- =========================================================
+     PANTALLA DE AUTENTICACIÓN
+========================================================== -->
+
+<div id="authScreen">
+
+    <div class="auth-container">
+
+        <div class="auth-card">
+
+            <div class="logo">
+
+                <div class="logo-icon">
+                    ☀️
+                </div>
+
+                <h1>SOLFIN</h1>
+
+                <p>
+                    Gestión inteligente de préstamos y cobranzas
+                </p>
+
+            </div>
+
+
+            <!-- LOGIN -->
+
+            <div id="loginBox">
+
+                <h2 class="auth-title">
+                    Bienvenido
+                </h2>
+
+                <p class="auth-subtitle">
+                    Ingresá a tu cuenta
+                </p>
+
+                <div id="loginMessage"
+                     class="message">
+                </div>
+
+                <form id="loginForm">
+
+                    <div class="form-group">
+
+                        <label>
+                            Email
+                        </label>
+
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            placeholder="tu@email.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            Contraseña
+                        </label>
+
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            placeholder="••••••••"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-full"
+                    >
+                        Ingresar
+                    </button>
+
+                </form>
+
+
+                <div class="auth-switch">
+
+                    ¿No tenés una cuenta?
+
+                    <button
+                        type="button"
+                        onclick="mostrarRegistro()"
+                    >
+                        Crear cuenta
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- REGISTRO -->
+
+            <div id="registerBox"
+                 style="display:none">
+
+                <h2 class="auth-title">
+                    Crear cuenta
+                </h2>
+
+                <p class="auth-subtitle">
+                    Registrate para comenzar
+                </p>
+
+                <div id="registerMessage"
+                     class="message">
+                </div>
+
+                <form id="registerForm">
+
+                    <div class="form-group">
+
+                        <label>
+                            Nombre
+                        </label>
+
+                        <input
+                            type="text"
+                            id="registerName"
+                            placeholder="Tu nombre"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            Email
+                        </label>
+
+                        <input
+                            type="email"
+                            id="registerEmail"
+                            placeholder="tu@email.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label>
+                            Contraseña
+                        </label>
+
+                        <input
+                            type="password"
+                            id="registerPassword"
+                            placeholder="Mínimo 6 caracteres"
+                            minlength="6"
+                            required
+                        >
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary btn-full"
+                    >
+                        Crear cuenta
+                    </button>
+
+                </form>
+
+
+                <div class="auth-switch">
+
+                    ¿Ya tenés una cuenta?
+
+                    <button
+                        type="button"
+                        onclick="mostrarLogin()"
+                    >
+                        Iniciar sesión
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     APLICACIÓN
+========================================================== -->
+
+<div id="appScreen">
+
+    <div class="app-layout">
+
+
+        <!-- SIDEBAR -->
+
+        <aside class="sidebar"
+               id="sidebar">
+
+            <div class="sidebar-logo">
+
+                <div class="sidebar-logo-title">
+
+                    <div class="sidebar-sun">
+                        ☀️
+                    </div>
+
+                    <div>
+
+                        <h2>
+                            SOLFIN
+                        </h2>
+
+                        <small>
+                            Préstamos & cobranzas
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <nav class="nav">
+
+                <button
+                    class="active"
+                    onclick="mostrarSeccion('dashboard', this)"
+                >
+
+                    <span class="nav-icon">
+                        📊
+                    </span>
+
+                    Dashboard
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('clientes', this)"
+                >
+
+                    <span class="nav-icon">
+                        👥
+                    </span>
+
+                    Clientes
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('prestamos', this)"
+                >
+
+                    <span class="nav-icon">
+                        💰
+                    </span>
+
+                    Préstamos
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('cuotas', this)"
+                >
+
+                    <span class="nav-icon">
+                        📅
+                    </span>
+
+                    Cuotas
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('pagos', this)"
+                >
+
+                    <span class="nav-icon">
+                        💵
+                    </span>
+
+                    Pagos
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('reportes', this)"
+                >
+
+                    <span class="nav-icon">
+                        📈
+                    </span>
+
+                    Reportes
+
+                </button>
+
+
+                <button
+                    onclick="mostrarSeccion('configuracion', this)"
+                >
+
+                    <span class="nav-icon">
+                        ⚙️
+                    </span>
+
+                    Configuración
+
+                </button>
+
+            </nav>
+
+
+            <div class="sidebar-bottom">
+
+                <div
+                    class="user-info"
+                    id="sidebarUser"
+                >
+                    Usuario
+                </div>
+
+                <button
+                    class="logout-btn"
+                    onclick="cerrarSesion()"
+                >
+                    🚪 Cerrar sesión
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- CONTENIDO PRINCIPAL -->
+
+        <main class="main">
+
+            <header class="topbar">
+
+                <div style="display:flex;align-items:center;gap:12px">
+
+                    <button
+                        class="mobile-menu"
+                        onclick="toggleSidebar()"
+                    >
+                        ☰
+                    </button>
+
+                    <div
+                        class="topbar-title"
+                        id="pageTitle"
+                    >
+                        Dashboard
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="topbar-user"
+                    id="topbarUser"
+                >
+                    Usuario
+                </div>
+
+            </header>
+
+
+            <div class="content">
+
+
+                <!-- =================================================
+                     DASHBOARD
+                ================================================== -->
+
+                <section
+                    id="section-dashboard"
+                    class="section active"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Dashboard
+                            </h2>
+
+                            <p>
+                                Resumen general de tu actividad
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="stats-grid">
+
+
+                        <div class="stat-card">
+
+                            <div>
+
+                                <h4>
+                                    CLIENTES
+                                </h4>
+
+                                <strong id="totalClientes">
+                                    0
+                                </strong>
+
+                            </div>
+
+                            <div class="stat-icon">
+                                👥
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <div>
+
+                                <h4>
+                                    PRÉSTAMOS ACTIVOS
+                                </h4>
+
+                                <strong id="totalPrestamos">
+                                    0
+                                </strong>
+
+                            </div>
+
+                            <div class="stat-icon">
+                                💰
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <div>
+
+                                <h4>
+                                    DINERO PRESTADO
+                                </h4>
+
+                                <strong id="dineroPrestado">
+                                    $0
+                                </strong>
+
+                            </div>
+
+                            <div class="stat-icon">
+                                💵
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <div>
+
+                                <h4>
+                                    POR COBRAR
+                                </h4>
+
+                                <strong id="dineroCobrar">
+                                    $0
+                                </strong>
+
+                            </div>
+
+                            <div class="stat-icon">
+                                📈
+                            </div>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <div class="dashboard-grid">
+
+
+                        <div class="card">
+
+                            <h3>
+                                Actividad reciente
+                            </h3>
+
+                            <div
+                                id="actividadReciente"
+                                class="empty-state"
+                            >
+
+                                <div class="empty-icon">
+                                    📋
+                                </div>
+
+                                <p>
+                                    Todavía no hay actividad registrada.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="card">
+
+                            <h3>
+                                Acciones rápidas
+                            </h3>
+
+                            <button
+                                class="btn btn-primary btn-full"
+                                onclick="abrirModalCliente()"
+                                style="margin-bottom:10px"
+                            >
+                                ➕ Nuevo cliente
+                            </button>
+
+                            <button
+                                class="btn btn-warning btn-full"
+                                onclick="mostrarSeccionPorId('prestamos')"
+                            >
+                                💰 Nuevo préstamo
+                            </button>
+
+                        </div>
+
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     CLIENTES
+                ================================================== -->
+
+                <section
+                    id="section-clientes"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Clientes
+                            </h2>
+
+                            <p>
+                                Administrá tus clientes
+                            </p>
+
+                        </div>
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="abrirModalCliente()"
+                        >
+                            ➕ Nuevo cliente
+                        </button>
+
+                    </div>
+
+
+                    <div class="toolbar">
+
+                        <div class="search">
+
+                            <input
+                                type="text"
+                                id="buscarCliente"
+                                placeholder="🔎 Buscar por nombre, DNI o teléfono..."
+                                oninput="filtrarClientes()"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="table-container">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Cliente
+                                    </th>
+
+                                    <th>
+                                        DNI
+                                    </th>
+
+                                    <th>
+                                        Teléfono
+                                    </th>
+
+                                    <th>
+                                        Ciudad
+                                    </th>
+
+                                    <th>
+                                        Acciones
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody
+                                id="clientesTableBody"
+                            >
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     PRÉSTAMOS
+                ================================================== -->
+
+                <section
+                    id="section-prestamos"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Préstamos
+                            </h2>
+
+                            <p>
+                                Administrá tus préstamos
+                            </p>
+
+                        </div>
+
+                        <button
+                            class="btn btn-primary"
+                            onclick="alert('El motor de préstamos será implementado en el siguiente módulo.')"
+                        >
+                            ➕ Nuevo préstamo
+                        </button>
+
+                    </div>
+
+
+                    <div class="module-placeholder">
+
+                        <div class="big-icon">
+                            💰
+                        </div>
+
+                        <h3>
+                            Motor de préstamos
+                        </h3>
+
+                        <p>
+                            Acá vamos a crear préstamos,
+                            seleccionar clientes, calcular intereses,
+                            comisiones, cuotas diarias, semanales
+                            o mensuales y generar automáticamente
+                            el plan de pagos.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     CUOTAS
+                ================================================== -->
+
+                <section
+                    id="section-cuotas"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Cuotas
+                            </h2>
+
+                            <p>
+                                Seguimiento de cuotas
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="module-placeholder">
+
+                        <div class="big-icon">
+                            📅
+                        </div>
+
+                        <h3>
+                            Gestión de cuotas
+                        </h3>
+
+                        <p>
+                            Próximamente podremos ver cuotas
+                            pendientes, pagadas, vencidas y
+                            próximas a vencer.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     PAGOS
+                ================================================== -->
+
+                <section
+                    id="section-pagos"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Pagos
+                            </h2>
+
+                            <p>
+                                Registro de cobranzas
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="module-placeholder">
+
+                        <div class="big-icon">
+                            💵
+                        </div>
+
+                        <h3>
+                            Gestión de pagos
+                        </h3>
+
+                        <p>
+                            Acá vamos a registrar cobranzas,
+                            métodos de pago, fechas, montos,
+                            saldos y comprobantes.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     REPORTES
+                ================================================== -->
+
+                <section
+                    id="section-reportes"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Reportes
+                            </h2>
+
+                            <p>
+                                Información financiera
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="module-placeholder">
+
+                        <div class="big-icon">
+                            📈
+                        </div>
+
+                        <h3>
+                            Reportes
+                        </h3>
+
+                        <p>
+                            Vamos a generar reportes de préstamos,
+                            cobranzas, ganancias, morosidad,
+                            clientes y movimientos.
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+                <!-- =================================================
+                     CONFIGURACIÓN
+                ================================================== -->
+
+                <section
+                    id="section-configuracion"
+                    class="section"
+                >
+
+                    <div class="section-header">
+
+                        <div>
+
+                            <h2>
+                                Configuración
+                            </h2>
+
+                            <p>
+                                Configurá tu cuenta SOLFIN
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="card">
+
+                        <h3>
+                            Cuenta
+                        </h3>
+
+                        <p
+                            id="configEmail"
+                            style="color:var(--muted);margin-top:8px"
+                        >
+                            -
+                        </p>
+
+                    </div>
+
+                </section>
+
+
+            </div>
+
+        </main>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     MODAL NUEVO CLIENTE
+========================================================== -->
+
+<div
+    id="clienteModal"
+    class="modal"
+>
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h2>
+                Nuevo cliente
+            </h2>
+
+            <button
+                class="modal-close"
+                onclick="cerrarModalCliente()"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            id="clienteMessage"
+            class="message"
+        >
+        </div>
+
+
+        <form id="clienteForm">
+
+            <div class="form-grid">
+
+
+                <div class="form-group">
+
+                    <label>
+                        Nombre *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="clienteNombre"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Apellido *
+                    </label>
+
+                    <input
+                        type="text"
+                        id="clienteApellido"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        DNI
+                    </label>
+
+                    <input
+                        type="text"
+                        id="clienteDni"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Teléfono
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="clienteTelefono"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Email
+                    </label>
+
+                    <input
+                        type="email"
+                        id="clienteEmail"
+                    >
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label>
+                        Ciudad
+                    </label>
+
+                    <input
+                        type="text"
+                        id="clienteCiudad"
+                    >
+
+                </div>
+
+
+                <div class="form-group full">
+
+                    <label>
+                        Dirección
+                    </label>
+
+                    <input
+                        type="text"
+                        id="clienteDireccion"
+                    >
+
+                </div>
+
+
+                <div class="form-group full">
+
+                    <label>
+                        Observaciones
+                    </label>
+
+                    <textarea
+                        id="clienteObservaciones"
+                    ></textarea>
+
+                </div>
+
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    onclick="cerrarModalCliente()"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                >
+                    Guardar cliente
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   CONFIGURACIÓN SUPABASE
+============================================================ */
+
+/*
+   ⚠️ PEGÁ ACÁ LOS DATOS DE TU PROYECTO SUPABASE.
+
+   Ejemplo:
+
+   const SUPABASE_URL =
+       "https://xxxxxxxx.supabase.co";
+
+   const SUPABASE_KEY =
+       "sb_publishable_xxxxxxxxx";
+
+   NO uses una service_role key.
+*/
+
+const SUPABASE_URL = "PEGAR_AQUI_TU_PROJECT_URL";
+
+const SUPABASE_KEY = "PEGAR_AQUI_TU_PUBLISHABLE_KEY";
+
+
+/* ============================================================
+   CONEXIÓN
+============================================================ */
+
+const supabaseClient =
+    window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_KEY
+    );
+
+
+/* ============================================================
+   VARIABLES
+============================================================ */
+
+let usuarioActual = null;
+let todosLosClientes = [];
+
+
+/* ============================================================
+   AUTH - MOSTRAR LOGIN
+============================================================ */
+
+function mostrarLogin() {
+
+    document.getElementById("loginBox")
+        .style.display = "block";
+
+    document.getElementById("registerBox")
+        .style.display = "none";
+
+}
+
+
+/* ============================================================
+   AUTH - MOSTRAR REGISTRO
+============================================================ */
+
+function mostrarRegistro() {
+
+    document.getElementById("loginBox")
+        .style.display = "none";
+
+    document.getElementById("registerBox")
+        .style.display = "block";
+
+}
+
+
+/* ============================================================
+   MENSAJES
+============================================================ */
+
+function mostrarMensaje(id, texto, tipo) {
+
+    const elemento =
+        document.getElementById(id);
+
+    elemento.textContent = texto;
+
+    elemento.className =
+        "message " + tipo;
+
+}
+
+
+function limpiarMensaje(id) {
+
+    const elemento =
+        document.getElementById(id);
+
+    elemento.textContent = "";
+
+    elemento.className =
+        "message";
+
+}
+
+
+/* ============================================================
+   REGISTRO
+============================================================ */
+
+document.getElementById("registerForm")
+.addEventListener("submit", async function(e) {
+
+    e.preventDefault();
+
+    limpiarMensaje("registerMessage");
+
+    const nombre =
+        document.getElementById("registerName")
+        .value
+        .trim();
+
+    const email =
+        document.getElementById("registerEmail")
+        .value
+        .trim();
+
+    const password =
+        document.getElementById("registerPassword")
+        .value;
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient.auth.signUp({
+
+            email: email,
+
+            password: password,
+
+            options: {
+
+                data: {
+                    nombre: nombre
+                }
+
+            }
+
+        });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        mostrarMensaje(
+            "registerMessage",
+            "Cuenta creada correctamente. Revisá tu email si Supabase solicita confirmación.",
+            "success"
+        );
+
+
+        document.getElementById("registerForm")
+            .reset();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        mostrarMensaje(
+            "registerMessage",
+            error.message || "No se pudo crear la cuenta.",
+            "error"
+        );
+
+    }
+
+});
+
+
+/* ============================================================
+   LOGIN
+============================================================ */
+
+document.getElementById("loginForm")
+.addEventListener("submit", async function(e) {
+
+    e.preventDefault();
+
+    limpiarMensaje("loginMessage");
+
+    const email =
+        document.getElementById("loginEmail")
+        .value
+        .trim();
+
+    const password =
+        document.getElementById("loginPassword")
+        .value;
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+        await supabaseClient.auth.signInWithPassword({
+
+            email: email,
+
+            password: password
+
+        });
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        await iniciarAplicacion();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        mostrarMensaje(
+            "loginMessage",
+            error.message || "Email o contraseña incorrectos.",
+            "error"
+        );
+
+    }
+
+});
+
+
+/* ============================================================
+   INICIALIZAR APLICACIÓN
+============================================================ */
+
+async function iniciarAplicacion() {
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient.auth.getUser();
+
+
+    if (error || !data.user) {
+
+        mostrarPantallaLogin();
+
+        return;
+    }
+
+
+    usuarioActual = data.user;
+
+    mostrarAplicacion();
+
+    await cargarClientes();
+
+}
+
+
+/* ============================================================
+   MOSTRAR APP
+============================================================ */
+
+function mostrarAplicacion() {
+
+    document.getElementById("authScreen")
+        .style.display = "none";
+
+    document.getElementById("appScreen")
+        .style.display = "block";
+
+
+    const email =
+        usuarioActual.email || "Usuario";
+
+
+    document.getElementById("sidebarUser")
+        .textContent = email;
+
+    document.getElementById("topbarUser")
+        .textContent = email;
+
+    document.getElementById("configEmail")
+        .textContent = email;
+
+}
+
+
+/* ============================================================
+   MOSTRAR LOGIN
+============================================================ */
+
+function mostrarPantallaLogin() {
+
+    document.getElementById("authScreen")
+        .style.display = "flex";
+
+    document.getElementById("appScreen")
+        .style.display = "none";
+
+}
+
+
+/* ============================================================
+   CERRAR SESIÓN
+============================================================ */
+
+async function cerrarSesion() {
+
+    await supabaseClient.auth.signOut();
+
+    usuarioActual = null;
+
+    mostrarPantallaLogin();
+
+    mostrarLogin();
+
+}
+
+
+/* ============================================================
+   CAMBIO DE SESIÓN
+============================================================ */
+
+supabaseClient.auth.onAuthStateChange(
+    async (event, session) => {
+
+        if (session && !usuarioActual) {
+
+            usuarioActual =
+                session.user;
+
+            mostrarAplicacion();
+
+            await cargarClientes();
+
+        }
+
+        if (!session) {
+
+            usuarioActual = null;
+
+            mostrarPantallaLogin();
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   NAVEGACIÓN
+============================================================ */
+
+function mostrarSeccion(nombre, boton) {
+
+    document.querySelectorAll(".section")
+        .forEach(section => {
+
+            section.classList.remove("active");
+
+        });
+
+
+    const seccion =
+        document.getElementById(
+            "section-" + nombre
+        );
+
+
+    if (seccion) {
+
+        seccion.classList.add("active");
+
+    }
+
+
+    document.querySelectorAll(".nav button")
+        .forEach(btn => {
+
+            btn.classList.remove("active");
+
+        });
+
+
+    if (boton) {
+
+        boton.classList.add("active");
+
+    }
+
+
+    const titulos = {
+
+        dashboard: "Dashboard",
+
+        clientes: "Clientes",
+
+        prestamos: "Préstamos",
+
+        cuotas: "Cuotas",
+
+        pagos: "Pagos",
+
+        reportes: "Reportes",
+
+        configuracion: "Configuración"
+
+    };
+
+
+    document.getElementById("pageTitle")
+        .textContent =
+        titulos[nombre] || "SOLFIN";
+
+
+    cerrarSidebar();
+
+}
+
+
+function mostrarSeccionPorId(nombre) {
+
+    const botones =
+        document.querySelectorAll(".nav button");
+
+    let botonEncontrado = null;
+
+
+    botones.forEach(btn => {
+
+        if (
+            btn.textContent
+                .toLowerCase()
+                .includes(nombre)
+        ) {
+
+            botonEncontrado = btn;
+
+        }
+
+    });
+
+
+    mostrarSeccion(
+        nombre,
+        botonEncontrado
+    );
+
+}
+
+
+/* ============================================================
+   SIDEBAR MOBILE
+============================================================ */
+
+function toggleSidebar() {
+
+    document.getElementById("sidebar")
+        .classList.toggle("open");
+
+}
+
+
+function cerrarSidebar() {
+
+    document.getElementById("sidebar")
+        .classList.remove("open");
+
+}
+
+
+/* ============================================================
+   CLIENTES - CARGAR
+============================================================ */
+
+async function cargarClientes() {
+
+    if (!usuarioActual) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+        .from("clientes")
+        .select("*")
+        .eq("user_id", usuarioActual.id)
+        .order("created_at", {
+            ascending: false
+        });
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando clientes:",
+            error
+        );
+
+        return;
+    }
+
+
+    todosLosClientes = data || [];
+
+    mostrarClientes(
+        todosLosClientes
+    );
+
+
+    document.getElementById("totalClientes")
+        .textContent =
+        todosLosClientes.length;
+
+}
+
+
+/* ============================================================
+   CLIENTES - MOSTRAR
+============================================================ */
+
+function mostrarClientes(clientes) {
+
+    const tbody =
+        document.getElementById(
+            "clientesTableBody"
+        );
+
+
+    if (!clientes.length) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="5">
+
+                    <div class="empty-state">
+
+                        <div class="empty-icon">
+                            👥
+                        </div>
+
+                        <p>
+                            No hay clientes registrados.
+                        </p>
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML =
+        clientes.map(cliente => `
+
+            <tr>
+
+                <td>
+
+                    <strong>
+                        ${escapeHTML(
+                            cliente.nombre || ""
+                        )}
+                        ${escapeHTML(
+                            cliente.apellido || ""
+                        )}
+                    </strong>
+
+                </td>
+
+
+                <td>
+                    ${escapeHTML(
+                        cliente.dni || "-"
+                    )}
+                </td>
+
+
+                <td>
+                    ${escapeHTML(
+                        cliente.telefono || "-"
+                    )}
+                </td>
+
+
+                <td>
+                    ${escapeHTML(
+                        cliente.ciudad || "-"
+                    )}
+                </td>
+
+
+                <td>
+
+                    <button
+                        class="btn btn-secondary"
+                        style="padding:7px 10px"
+                        onclick="verCliente('${cliente.id}')"
+                    >
+                        👁️
+                    </button>
+
+                    <button
+                        class="btn btn-danger"
+                        style="padding:7px 10px"
+                        onclick="eliminarCliente('${cliente.id}')"
+                    >
+                        🗑️
+                    </button>
+
+                </td>
+
+            </tr>
+
+        `).join("");
+
+}
+
+
+/* ============================================================
+   FILTRAR CLIENTES
+============================================================ */
+
+function filtrarClientes() {
+
+    const texto =
+        document.getElementById(
+            "buscarCliente"
+        )
+        .value
+        .toLowerCase()
+        .trim();
+
+
+    const filtrados =
+        todosLosClientes.filter(cliente => {
+
+            const nombre =
+                `${cliente.nombre || ""}
+                ${cliente.apellido || ""}`
+                .toLowerCase();
+
+            const dni =
+                (cliente.dni || "")
+                .toLowerCase();
+
+            const telefono =
+                (cliente.telefono || "")
+                .toLowerCase();
+
+
+            return (
+                nombre.includes(texto) ||
+                dni.includes(texto) ||
+                telefono.includes(texto)
+            );
+
+        });
+
+
+    mostrarClientes(filtrados);
+
+}
+
+
+/* ============================================================
+   MODAL CLIENTE
+============================================================ */
+
+function abrirModalCliente() {
+
+    document.getElementById(
+        "clienteModal"
+    )
+    .classList.add("show");
+
+}
+
+
+function cerrarModalCliente() {
+
+    document.getElementById(
+        "clienteModal"
+    )
+    .classList.remove("show");
+
+    document.getElementById(
+        "clienteForm"
+    )
+    .reset();
+
+    limpiarMensaje(
+        "clienteMessage"
+    );
+
+}
+
+
+/* ============================================================
+   GUARDAR CLIENTE
+============================================================ */
+
+document.getElementById("clienteForm")
+.addEventListener("submit", async function(e) {
+
+    e.preventDefault();
+
+    limpiarMensaje("clienteMessage");
+
+
+    if (!usuarioActual) {
+
+        mostrarMensaje(
+            "clienteMessage",
+            "No hay una sesión activa.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const cliente = {
+
+        user_id: usuarioActual.id,
+
+        nombre:
+            document.getElementById(
+                "clienteNombre"
+            ).value.trim(),
+
+        apellido:
+            document.getElementById(
+                "clienteApellido"
+            ).value.trim(),
+
+        dni:
+            document.getElementById(
+                "clienteDni"
+            ).value.trim(),
+
+        telefono:
+            document.getElementById(
+                "clienteTelefono"
+            ).value.trim(),
+
+        email:
+            document.getElementById(
+                "clienteEmail"
+            ).value.trim(),
+
+        direccion:
+            document.getElementById(
+                "clienteDireccion"
+            ).value.trim(),
+
+        ciudad:
+            document.getElementById(
+                "clienteCiudad"
+            ).value.trim(),
+
+        observaciones:
+            document.getElementById(
+                "clienteObservaciones"
+            ).value.trim()
+
+    };
+
+
+    try {
+
+        const {
+            error
+        } =
+        await supabaseClient
+            .from("clientes")
+            .insert([cliente]);
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        cerrarModalCliente();
+
+        await cargarClientes();
+
+
+        alert(
+            "Cliente agregado correctamente."
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        mostrarMensaje(
+            "clienteMessage",
+            error.message ||
+            "No se pudo guardar el cliente.",
+            "error"
+        );
+
+    }
+
+});
+
+
+/* ============================================================
+   VER CLIENTE
+============================================================ */
+
+function verCliente(id) {
+
+    const cliente =
+        todosLosClientes.find(
+            c => c.id === id
+        );
+
+
+    if (!cliente) {
+        return;
+    }
+
+
+    alert(
+
+        "CLIENTE\n\n" +
+
+        "Nombre: " +
+        (cliente.nombre || "") +
+        " " +
+        (cliente.apellido || "") +
+
+        "\nDNI: " +
+        (cliente.dni || "-") +
+
+        "\nTeléfono: " +
+        (cliente.telefono || "-") +
+
+        "\nEmail: " +
+        (cliente.email || "-") +
+
+        "\nDirección: " +
+        (cliente.direccion || "-") +
+
+        "\nCiudad: " +
+        (cliente.ciudad || "-")
+
+    );
+
+}
+
+
+/* ============================================================
+   ELIMINAR CLIENTE
+============================================================ */
+
+async function eliminarCliente(id) {
+
+    const cliente =
+        todosLosClientes.find(
+            c => c.id === id
+        );
+
+
+    if (!cliente) {
+        return;
+    }
+
+
+    const confirmar =
+        confirm(
+
+            "¿Querés eliminar a " +
+            cliente.nombre +
+            " " +
+            cliente.apellido +
+            "?"
+
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const {
+        error
+    } =
+    await supabaseClient
+        .from("clientes")
+        .delete()
+        .eq("id", id)
+        .eq(
+            "user_id",
+            usuarioActual.id
+        );
+
+
+    if (error) {
+
+        alert(
+            "No se pudo eliminar: " +
+            error.message
+        );
+
+        return;
+    }
+
+
+    await cargarClientes();
+
+}
+
+
+/* ============================================================
+   SEGURIDAD HTML
+============================================================ */
+
+function escapeHTML(valor) {
+
+    return String(valor)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+/* ============================================================
+   INICIAR
+============================================================ */
+
+(async function() {
+
+    try {
+
+        const {
+            data
+        } =
+        await supabaseClient.auth
+            .getSession();
+
+
+        if (
+            data &&
+            data.session
+        ) {
+
+            usuarioActual =
+                data.session.user;
+
+            mostrarAplicacion();
+
+            await cargarClientes();
+
+        } else {
+
+            mostrarPantallaLogin();
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Error iniciando SOLFIN:",
+            error
+        );
+
+        mostrarPantallaLogin();
+
+    }
+
+})();
+
+</script>
+
+</body>
+</html>
