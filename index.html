@@ -2221,15 +2221,38 @@ function irPrestamos(){
 }
 
 
-function abrirNuevoPrestamo(){
+function abrirNuevoPrestamo() {
 
-    alert(
-        "🚧 El motor de préstamos es el siguiente módulo que vamos a construir."
-    );
+    mostrarSeccionPorId("prestamos");
+
+    const panel =
+        document.getElementById("prestamoPanel");
+
+    if (panel) {
+        panel.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+
+    cargarClientesParaPrestamo();
+
+    const fecha =
+        document.getElementById("prestamoFecha");
+
+    if (
+        fecha &&
+        !fecha.value
+    ) {
+
+        fecha.value =
+            new Date()
+                .toISOString()
+                .split("T")[0];
+
+    }
 
 }
-
-
 /* =========================================================
    SIDEBAR MOBILE
 ========================================================= */
@@ -2753,6 +2776,796 @@ async function bloquearUsuario(id) {
 
 }
 /* =========================================================
+   PRÉSTAMOS V1.0
+========================================================= */
+
+let todosLosPrestamos = [];
+
+
+/* =========================================================
+   CLIENTES PARA PRÉSTAMO
+========================================================= */
+
+async function cargarClientesParaPrestamo() {
+
+    if (!usuarioActual) {
+        return;
+    }
+
+
+    const select =
+        document.getElementById(
+            "prestamoCliente"
+        );
+
+    if (!select) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+        .from("clientes")
+        .select("id,nombre,apellido,dni")
+        .eq(
+            "user_id",
+            usuarioActual.id
+        )
+        .order("nombre");
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando clientes:",
+            error
+        );
+
+        return;
+    }
+
+
+    select.innerHTML = `
+        <option value="">
+            Seleccionar cliente...
+        </option>
+    `;
+
+
+    (data || []).forEach(cliente => {
+
+        const option =
+            document.createElement("option");
+
+        option.value =
+            cliente.id;
+
+        option.textContent =
+            `${cliente.nombre || ""} ${cliente.apellido || ""}`
+            +
+            (
+                cliente.dni
+                    ? ` - DNI ${cliente.dni}`
+                    : ""
+            );
+
+        select.appendChild(option);
+
+    });
+
+}
+
+
+/* =========================================================
+   CALCULAR PRÉSTAMO
+========================================================= */
+
+function calcularPrestamo() {
+
+    const capital =
+        Number(
+            document.getElementById(
+                "prestamoCapital"
+            )?.value || 0
+        );
+
+    const interes =
+        Number(
+            document.getElementById(
+                "prestamoInteres"
+            )?.value || 0
+        );
+
+    const comision =
+        Number(
+            document.getElementById(
+                "prestamoComision"
+            )?.value || 0
+        );
+
+    const cantidad =
+        Number(
+            document.getElementById(
+                "prestamoCantidad"
+            )?.value || 0
+        );
+
+
+    const valorInteres =
+        capital * interes / 100;
+
+    const valorComision =
+        capital * comision / 100;
+
+    const total =
+        capital +
+        valorInteres +
+        valorComision;
+
+    const cuota =
+        cantidad > 0
+            ? total / cantidad
+            : 0;
+
+
+    document.getElementById(
+        "resumenInteres"
+    ).textContent =
+        formatearPesos(
+            valorInteres
+        );
+
+
+    document.getElementById(
+        "resumenComision"
+    ).textContent =
+        formatearPesos(
+            valorComision
+        );
+
+
+    document.getElementById(
+        "resumenTotal"
+    ).textContent =
+        formatearPesos(
+            total
+        );
+
+
+    document.getElementById(
+        "resumenCuota"
+    ).textContent =
+        formatearPesos(
+            cuota
+        );
+
+
+    return {
+
+        capital,
+        interes,
+        comision,
+        cantidad,
+        valorInteres,
+        valorComision,
+        total,
+        cuota
+
+    };
+
+}
+
+
+/* =========================================================
+   GUARDAR PRÉSTAMO
+========================================================= */
+
+async function guardarPrestamo() {
+
+    limpiarMensaje(
+        "prestamoMessage"
+    );
+
+
+    if (!usuarioActual) {
+
+        mostrarMensaje(
+            "prestamoMessage",
+            "No hay una sesión activa.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const clienteId =
+        document.getElementById(
+            "prestamoCliente"
+        ).value;
+
+
+    if (!clienteId) {
+
+        mostrarMensaje(
+            "prestamoMessage",
+            "Seleccioná un cliente.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const calculo =
+        calcularPrestamo();
+
+
+    if (calculo.capital <= 0) {
+
+        mostrarMensaje(
+            "prestamoMessage",
+            "Ingresá un capital válido.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    if (calculo.cantidad <= 0) {
+
+        mostrarMensaje(
+            "prestamoMessage",
+            "La cantidad de cuotas debe ser mayor a 0.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const frecuencia =
+        document.getElementById(
+            "prestamoFrecuencia"
+        ).value;
+
+
+    const fechaInicio =
+        document.getElementById(
+            "prestamoFecha"
+        ).value;
+
+
+    const observaciones =
+        document.getElementById(
+            "prestamoObservaciones"
+        ).value.trim();
+
+
+    try {
+
+        /*
+         * CREAR PRÉSTAMO
+         */
+
+        const {
+            data: prestamo,
+            error
+        } =
+        await supabaseClient
+            .from("prestamos")
+            .insert([{
+
+                user_id:
+                    usuarioActual.id,
+
+                cliente_id:
+                    clienteId,
+
+                capital:
+                    calculo.capital,
+
+                porcentaje_interes:
+                    calculo.interes,
+
+                porcentaje_comision:
+                    calculo.comision,
+
+                frecuencia:
+                    frecuencia,
+
+                cantidad_cuotas:
+                    calculo.cantidad,
+
+                total_devolver:
+                    calculo.total,
+
+                valor_cuota:
+                    calculo.cuota,
+
+                fecha_inicio:
+                    fechaInicio ||
+                    new Date()
+                        .toISOString()
+                        .split("T")[0],
+
+                estado:
+                    "activo",
+
+                observaciones:
+                    observaciones
+
+            }])
+            .select()
+            .single();
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        /*
+         * GENERAR CUOTAS
+         */
+
+        const cuotas =
+            generarCuotas(
+                prestamo,
+                {
+                    ...calculo,
+                    frecuencia,
+                    fechaInicio:
+                        fechaInicio ||
+                        new Date()
+                            .toISOString()
+                            .split("T")[0]
+                }
+            );
+
+
+        const {
+            error: errorCuotas
+        } =
+        await supabaseClient
+            .from("cuotas")
+            .insert(cuotas);
+
+
+        if (errorCuotas) {
+
+            /*
+             * Si falla la creación de cuotas,
+             * eliminamos el préstamo para
+             * evitar datos incompletos.
+             */
+
+            await supabaseClient
+                .from("prestamos")
+                .delete()
+                .eq(
+                    "id",
+                    prestamo.id
+                );
+
+            throw errorCuotas;
+        }
+
+
+        alert(
+            "✅ Préstamo creado correctamente.\n\n" +
+            `Total: ${formatearPesos(calculo.total)}\n` +
+            `Cuotas: ${calculo.cantidad}\n` +
+            `Valor: ${formatearPesos(calculo.cuota)}`
+        );
+
+
+        limpiarFormularioPrestamo();
+
+        await cargarPrestamos();
+
+
+    } catch (error) {
+
+        console.error(
+            "Error creando préstamo:",
+            error
+        );
+
+
+        mostrarMensaje(
+            "prestamoMessage",
+            "No se pudo crear el préstamo: " +
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   GENERAR CUOTAS
+========================================================= */
+
+function generarCuotas(
+    prestamo,
+    datos
+) {
+
+    const cuotas = [];
+
+
+    let fecha =
+        convertirFecha(
+            datos.fechaInicio
+        );
+
+
+    for (
+        let i = 1;
+        i <= datos.cantidad;
+        i++
+    ) {
+
+        fecha =
+            sumarFrecuencia(
+                fecha,
+                datos.frecuencia
+            );
+
+
+        cuotas.push({
+
+            user_id:
+                usuarioActual.id,
+
+            prestamo_id:
+                prestamo.id,
+
+            cliente_id:
+                prestamo.cliente_id,
+
+            numero:
+                i,
+
+            fecha_vencimiento:
+                fechaToISO(fecha),
+
+            monto:
+                datos.cuota,
+
+            monto_pagado:
+                0,
+
+            estado:
+                "pendiente"
+
+        });
+
+    }
+
+
+    return cuotas;
+
+}
+
+
+/* =========================================================
+   FECHAS
+========================================================= */
+
+function convertirFecha(fecha) {
+
+    const partes =
+        String(fecha)
+            .split("-")
+            .map(Number);
+
+
+    return new Date(
+        partes[0],
+        partes[1] - 1,
+        partes[2]
+    );
+
+}
+
+
+function fechaToISO(fecha) {
+
+    return [
+        fecha.getFullYear(),
+
+        String(
+            fecha.getMonth() + 1
+        ).padStart(2,"0"),
+
+        String(
+            fecha.getDate()
+        ).padStart(2,"0")
+
+    ].join("-");
+
+}
+
+
+function sumarFrecuencia(
+    fecha,
+    frecuencia
+) {
+
+    const nueva =
+        new Date(fecha);
+
+
+    if (
+        frecuencia ===
+        "diaria"
+    ) {
+
+        nueva.setDate(
+            nueva.getDate() + 1
+        );
+
+    } else if (
+        frecuencia ===
+        "semanal"
+    ) {
+
+        nueva.setDate(
+            nueva.getDate() + 7
+        );
+
+    } else {
+
+        nueva.setMonth(
+            nueva.getMonth() + 1
+        );
+
+    }
+
+
+    return nueva;
+
+}
+
+
+/* =========================================================
+   CARGAR PRÉSTAMOS
+========================================================= */
+
+async function cargarPrestamos() {
+
+    if (!usuarioActual) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+        .from("prestamos")
+        .select(`
+            id,
+            cliente_id,
+            capital,
+            porcentaje_interes,
+            porcentaje_comision,
+            frecuencia,
+            cantidad_cuotas,
+            total_devolver,
+            valor_cuota,
+            fecha_inicio,
+            estado,
+            clientes (
+                nombre,
+                apellido,
+                dni
+            )
+        `)
+        .eq(
+            "user_id",
+            usuarioActual.id
+        )
+        .order(
+            "created_at",
+            {
+                ascending:false
+            }
+        );
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando préstamos:",
+            error
+        );
+
+        return;
+    }
+
+
+    todosLosPrestamos =
+        data || [];
+
+
+    mostrarPrestamos(
+        todosLosPrestamos
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR PRÉSTAMOS
+========================================================= */
+
+function mostrarPrestamos(
+    prestamos
+) {
+
+    const tbody =
+        document.getElementById(
+            "prestamosTableBody"
+        );
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    if (!prestamos.length) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="5">
+
+                    <div class="empty-state">
+                        💰 No hay préstamos registrados.
+                    </div>
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML =
+        prestamos.map(
+            prestamo => {
+
+                const cliente =
+                    prestamo.clientes;
+
+
+                const nombre =
+                    cliente
+                        ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+                        : "Cliente";
+
+
+                return `
+
+                    <tr>
+
+                        <td>
+                            <strong>
+                                ${escapeHTML(nombre)}
+                            </strong>
+                        </td>
+
+                        <td>
+                            ${formatearPesos(
+                                prestamo.capital
+                            )}
+                        </td>
+
+                        <td>
+                            ${prestamo.cantidad_cuotas}
+                            ${escapeHTML(
+                                prestamo.frecuencia || ""
+                            )}
+                        </td>
+
+                        <td>
+                            ${formatearPesos(
+                                prestamo.total_devolver
+                            )}
+                        </td>
+
+                        <td style="color:#166534;font-weight:700">
+                            ${escapeHTML(
+                                prestamo.estado || "activo"
+                            )}
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        ).join("");
+
+}
+
+
+/* =========================================================
+   LIMPIAR FORMULARIO
+========================================================= */
+
+function limpiarFormularioPrestamo() {
+
+    document.getElementById(
+        "prestamoCliente"
+    ).value = "";
+
+    document.getElementById(
+        "prestamoCapital"
+    ).value = "";
+
+    document.getElementById(
+        "prestamoInteres"
+    ).value = "0";
+
+    document.getElementById(
+        "prestamoComision"
+    ).value = "0";
+
+    document.getElementById(
+        "prestamoCantidad"
+    ).value = "5";
+
+    document.getElementById(
+        "prestamoObservaciones"
+    ).value = "";
+
+    calcularPrestamo();
+
+}
+
+
+function cancelarNuevoPrestamo() {
+
+    limpiarFormularioPrestamo();
+
+}
+
+
+/* =========================================================
+   FORMATO PESOS
+========================================================= */
+
+function formatearPesos(valor) {
+
+    return new Intl.NumberFormat(
+        "es-AR",
+        {
+            style:"currency",
+            currency:"ARS",
+            maximumFractionDigits:2
+        }
+    ).format(
+        Number(valor || 0)
+    );
+
+}
+    /* =========================================================
    INICIO
 ========================================================= */
 
@@ -2769,7 +3582,7 @@ async function bloquearUsuario(id) {
             const user=data.session.user;
 
             await verificarAutorizacion(user);
-
+await cargarPrestamos();
         }else{
 
             document.getElementById("authScreen")
