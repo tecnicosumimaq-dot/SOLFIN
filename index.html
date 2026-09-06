@@ -1013,32 +1013,166 @@ tr:last-child td{border-bottom:0}
 
 </section>
                 <!-- CUOTAS -->
-                <section id="section-cuotas" class="section">
+              <section id="section-cuotas" class="section">
 
-                    <div class="module-placeholder">
-                        <div class="big-icon">📅</div>
-                        <h3>Cuotas</h3>
-                        <p>
-                            Próximamente veremos cuotas pendientes,
-                            pagadas y vencidas.
-                        </p>
-                    </div>
+    <div class="section-header">
 
-                </section>
+        <div>
+            <h2>Cuotas</h2>
+            <p>Seguimiento de vencimientos y cobranzas</p>
+        </div>
+
+        <button
+            class="btn btn-secondary"
+            onclick="cargarCuotas()"
+        >
+            🔄 Actualizar
+        </button>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+            <div>
+                <h4>PENDIENTES</h4>
+                <strong id="cuotasPendientes">0</strong>
+            </div>
+            <div class="stat-icon">📅</div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <h4>VENCIDAS</h4>
+                <strong id="cuotasVencidas">0</strong>
+            </div>
+            <div class="stat-icon">⚠️</div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <h4>PAGADAS</h4>
+                <strong id="cuotasPagadas">0</strong>
+            </div>
+            <div class="stat-icon">✅</div>
+        </div>
+
+        <div class="stat-card">
+            <div>
+                <h4>SALDO TOTAL</h4>
+                <strong id="saldoCuotas">$0</strong>
+            </div>
+            <div class="stat-icon">💰</div>
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div
+            class="toolbar"
+            style="margin-bottom:18px"
+        >
+
+            <div class="search">
+                <input
+                    id="buscarCuota"
+                    type="text"
+                    placeholder="🔎 Buscar cliente..."
+                    oninput="filtrarCuotas()"
+                >
+            </div>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Cliente</th>
+                        <th>Cuota</th>
+                        <th>Vencimiento</th>
+                        <th>Importe</th>
+                        <th>Pagado</th>
+                        <th>Saldo</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="cuotasTableBody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
 
 
                 <!-- PAGOS -->
-                <section id="section-pagos" class="section">
+               <section id="section-pagos" class="section">
 
-                    <div class="module-placeholder">
-                        <div class="big-icon">💵</div>
-                        <h3>Pagos</h3>
-                        <p>
-                            Próximamente registraremos todas las cobranzas.
-                        </p>
-                    </div>
+    <div class="section-header">
 
-                </section>
+        <div>
+            <h2>Pagos</h2>
+            <p>Historial de cobranzas registradas</p>
+        </div>
+
+        <button
+            class="btn btn-secondary"
+            onclick="cargarPagos()"
+        >
+            🔄 Actualizar
+        </button>
+
+    </div>
+
+
+    <div class="card">
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Importe</th>
+                        <th>Medio</th>
+                        <th>Observación</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="pagosTableBody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
 
 
                 <!-- REPORTES -->
@@ -1341,7 +1475,159 @@ tr:last-child td{border-bottom:0}
 
 
 <script>
+<!-- =====================================================
+     MODAL REGISTRAR PAGO
+====================================================== -->
 
+<div id="pagoModal" class="modal">
+
+    <div class="modal-content">
+
+        <div class="modal-header">
+
+            <h2>Registrar pago</h2>
+
+            <button
+                class="modal-close"
+                onclick="cerrarModalPago()"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div id="pagoMessage" class="message"></div>
+
+
+        <div
+            class="card"
+            style="background:#f8fafc;margin-bottom:20px"
+        >
+
+            <div class="profile-grid">
+
+                <div class="profile-item">
+                    <small>Cliente</small>
+                    <strong id="pagoCliente">-</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Cuota</small>
+                    <strong id="pagoNumeroCuota">-</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Importe cuota</small>
+                    <strong id="pagoImporteCuota">$0</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Saldo actual</small>
+                    <strong id="pagoSaldoActual">$0</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <input
+            type="hidden"
+            id="pagoCuotaId"
+        >
+
+
+        <input
+            type="hidden"
+            id="pagoPrestamoId"
+        >
+
+
+        <div class="form-group">
+
+            <label>
+                Importe a pagar *
+            </label>
+
+            <input
+                id="pagoImporte"
+                type="number"
+                min="0.01"
+                step="0.01"
+                placeholder="25000"
+            >
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Medio de pago
+            </label>
+
+            <select id="pagoMedio">
+
+                <option value="efectivo">
+                    Efectivo
+                </option>
+
+                <option value="transferencia">
+                    Transferencia
+                </option>
+
+                <option value="debito">
+                    Débito
+                </option>
+
+                <option value="otro">
+                    Otro
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>
+                Observación
+            </label>
+
+            <textarea
+                id="pagoObservacion"
+                rows="3"
+                placeholder="Ej.: Pago recibido en el domicilio..."
+            ></textarea>
+
+        </div>
+
+
+        <div class="modal-actions">
+
+            <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="cerrarModalPago()"
+            >
+                Cancelar
+            </button>
+
+            <button
+                type="button"
+                class="btn btn-success"
+                onclick="guardarPago()"
+            >
+                💵 Registrar pago
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
 /* =========================================================
    CONFIGURACIÓN SUPABASE
 ========================================================= */
