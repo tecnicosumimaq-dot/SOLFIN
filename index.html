@@ -2176,7 +2176,10 @@ function mostrarSeccion(nombre,boton){
     if(seccion){
         seccion.classList.add("active");
     }
-
+if (nombre === "prestamos") {
+    cargarClientesParaPrestamo();
+    cargarPrestamos();
+}
 
     document.querySelectorAll(".nav button")
         .forEach(b=>b.classList.remove("active"));
