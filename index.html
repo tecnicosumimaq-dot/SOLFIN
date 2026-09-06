@@ -3225,7 +3225,6 @@ function generarCuotas(
 
     const cuotas = [];
 
-
     let fecha =
         convertirFecha(
             datos.fechaInicio
@@ -3253,20 +3252,24 @@ function generarCuotas(
             prestamo_id:
                 prestamo.id,
 
-            cliente_id:
-                prestamo.cliente_id,
-
-            numero:
+            numero_cuota:
                 i,
 
             fecha_vencimiento:
                 fechaToISO(fecha),
 
-            monto:
-                datos.cuota,
+            importe:
+                Number(
+                    datos.cuota.toFixed(2)
+                ),
 
-            monto_pagado:
+            importe_pagado:
                 0,
+
+            saldo:
+                Number(
+                    datos.cuota.toFixed(2)
+                ),
 
             estado:
                 "pendiente"
@@ -3277,9 +3280,7 @@ function generarCuotas(
 
 
     return cuotas;
-
 }
-
 
 /* =========================================================
    FECHAS
