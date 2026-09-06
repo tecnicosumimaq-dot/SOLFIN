@@ -1088,7 +1088,8 @@ const supabaseClient =
 ========================================================= */
 
 let usuarioActual = null;
-let todosLosClientes = [];
+let todosLosUsuariosAdmin = [];
+    let todosLosClientes = [];
 let clienteEditando = null;
 
 
@@ -1986,7 +1987,494 @@ function escapeHTML(valor){
 
 }
 
+/* =========================================================
+   ADMINISTRACIÓN
+========================================================= */
 
+async function verificarAdmin() {
+
+    if (!usuarioActual) {
+        return false;
+    }
+
+    const { data, error } =
+        await supabaseClient
+            .from("profiles")
+            .select("id, email, autorizado, estado, rol")
+            .eq("id", usuarioActual.id)
+            .maybeSingle();
+
+    if (error) {
+
+        console.error(
+            "Error verificando administrador:",
+            error
+        );
+
+        return false;
+    }
+
+    return data && data.rol === "admin";
+}
+
+
+/* =========================================================
+   MOSTRAR BOTÓN ADMIN
+========================================================= */
+
+async function prepararPanelAdmin() {
+
+    const esAdmin =
+        await verificarAdmin();
+
+    const boton =
+        document.getElementById(
+            "adminNavButton"
+        );
+
+    if (!boton) {
+        return;
+    }
+
+    if (esAdmin) {
+
+        boton.classList.remove("hidden");
+
+        await cargarUsuariosAdmin();
+
+    } else {
+
+        boton.classList.add("hidden");
+
+    }
+
+}
+
+
+/* =========================================================
+   CARGAR USUARIOS
+========================================================= */
+
+async function cargarUsuariosAdmin() {
+
+    const esAdmin =
+        await verificarAdmin();
+
+    if (!esAdmin) {
+
+        alert(
+            "No tenés permisos para acceder a esta sección."
+        );
+
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+        await supabaseClient
+            .from("profiles")
+            .select(
+                "id,email,autorizado,estado,rol,created_at"
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
+
+
+    if (error) {
+
+        console.error(error);
+
+        alert(
+            "No se pudieron cargar los usuarios:\n\n" +
+            error.message
+        );
+
+        return;
+    }
+
+
+    todosLosUsuariosAdmin =
+        data || [];
+
+    mostrarUsuariosAdmin(
+        todosLosUsuariosAdmin
+    );
+
+
+    actualizarEstadisticasAdmin(
+        todosLosUsuariosAdmin
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR USUARIOS
+========================================================= */
+
+function mostrarUsuariosAdmin(usuarios) {
+
+    const tbody =
+        document.getElementById(
+            "usuariosAdminBody"
+        );
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    if (!usuarios.length) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5">
+
+                    <div class="empty-state">
+                        No hay usuarios registrados.
+                    </div>
+
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML = usuarios.map(usuario => {
+
+        let estadoTexto =
+            usuario.estado || "pendiente";
+
+
+        let estadoClase = "";
+
+
+        if (
+            estadoTexto === "activo"
+        ) {
+
+            estadoClase =
+                "style='color:#166534;font-weight:700'";
+
+        } else if (
+            estadoTexto === "bloqueado"
+        ) {
+
+            estadoClase =
+                "style='color:#991b1b;font-weight:700'";
+
+        } else {
+
+            estadoTexto =
+                "pendiente";
+
+            estadoClase =
+                "style='color:#92400e;font-weight:700'";
+
+        }
+
+
+        let acciones = "";
+
+
+        if (
+            usuario.id ===
+            usuarioActual.id
+        ) {
+
+            acciones =
+                `<span style="color:#64748b">
+                    Cuenta actual
+                 </span>`;
+
+        } else if (
+            usuario.estado ===
+            "pendiente"
+        ) {
+
+            acciones = `
+
+                <button
+                    class="btn btn-success"
+                    style="padding:7px 10px"
+                    onclick="activarUsuario('${usuario.id}')"
+                >
+                    ✅ Autorizar
+                </button>
+
+                <button
+                    class="btn btn-danger"
+                    style="padding:7px 10px"
+                    onclick="bloquearUsuario('${usuario.id}')"
+                >
+                    🚫 Bloquear
+                </button>
+
+            `;
+
+        } else if (
+            usuario.estado ===
+            "activo"
+        ) {
+
+            acciones = `
+
+                <button
+                    class="btn btn-danger"
+                    style="padding:7px 10px"
+                    onclick="bloquearUsuario('${usuario.id}')"
+                >
+                    🚫 Bloquear
+                </button>
+
+            `;
+
+        } else {
+
+            acciones = `
+
+                <button
+                    class="btn btn-success"
+                    style="padding:7px 10px"
+                    onclick="activarUsuario('${usuario.id}')"
+                >
+                    ✅ Reactivar
+                </button>
+
+            `;
+
+        }
+
+
+        return `
+
+            <tr>
+
+                <td>
+                    <strong>
+                        ${escapeHTML(
+                            usuario.email ||
+                            "Sin email"
+                        )}
+                    </strong>
+                </td>
+
+
+                <td>
+                    ${escapeHTML(
+                        usuario.email ||
+                        "-"
+                    )}
+                </td>
+
+
+                <td ${estadoClase}>
+                    ${escapeHTML(
+                        estadoTexto
+                    )}
+                </td>
+
+
+                <td>
+                    ${
+                        usuario.rol === "admin"
+                            ? "👑 Administrador"
+                            : "👤 Usuario"
+                    }
+                </td>
+
+
+                <td
+                    style="
+                        white-space:nowrap;
+                        display:flex;
+                        gap:6px;
+                        flex-wrap:wrap;
+                    "
+                >
+
+                    ${acciones}
+
+                </td>
+
+            </tr>
+
+        `;
+
+    }).join("");
+
+}
+
+
+/* =========================================================
+   ESTADÍSTICAS ADMIN
+========================================================= */
+
+function actualizarEstadisticasAdmin(
+    usuarios
+) {
+
+    const total =
+        usuarios.length;
+
+    const pendientes =
+        usuarios.filter(
+            u => u.estado === "pendiente"
+        ).length;
+
+    const activos =
+        usuarios.filter(
+            u => u.estado === "activo"
+        ).length;
+
+    const bloqueados =
+        usuarios.filter(
+            u => u.estado === "bloqueado"
+        ).length;
+
+
+    document.getElementById(
+        "adminTotalUsuarios"
+    ).textContent = total;
+
+
+    document.getElementById(
+        "adminPendientes"
+    ).textContent = pendientes;
+
+
+    document.getElementById(
+        "adminActivos"
+    ).textContent = activos;
+
+
+    document.getElementById(
+        "adminBloqueados"
+    ).textContent = bloqueados;
+
+}
+
+
+/* =========================================================
+   AUTORIZAR
+========================================================= */
+
+async function activarUsuario(id) {
+
+    const esAdmin =
+        await verificarAdmin();
+
+    if (!esAdmin) {
+        return;
+    }
+
+
+    const confirmar =
+        confirm(
+            "¿Querés autorizar este usuario?"
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("profiles")
+            .update({
+
+                autorizado: true,
+
+                estado: "activo"
+
+            })
+            .eq("id", id);
+
+
+    if (error) {
+
+        alert(
+            "❌ No se pudo autorizar:\n\n" +
+            error.message
+        );
+
+        return;
+    }
+
+
+    await cargarUsuariosAdmin();
+
+}
+
+
+/* =========================================================
+   BLOQUEAR
+========================================================= */
+
+async function bloquearUsuario(id) {
+
+    const esAdmin =
+        await verificarAdmin();
+
+    if (!esAdmin) {
+        return;
+    }
+
+
+    const confirmar =
+        confirm(
+            "¿Querés bloquear este usuario?"
+        );
+
+
+    if (!confirmar) {
+        return;
+    }
+
+
+    const {
+        error
+    } =
+        await supabaseClient
+            .from("profiles")
+            .update({
+
+                autorizado: false,
+
+                estado: "bloqueado"
+
+            })
+            .eq("id", id);
+
+
+    if (error) {
+
+        alert(
+            "❌ No se pudo bloquear:\n\n" +
+            error.message
+        );
+
+        return;
+    }
+
+
+    await cargarUsuariosAdmin();
+
+}
 /* =========================================================
    INICIO
 ========================================================= */
