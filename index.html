@@ -2944,13 +2944,11 @@ async function guardarPrestamo() {
     limpiarMensaje("prestamoMessage");
 
     if (!usuarioActual) {
-
         mostrarMensaje(
             "prestamoMessage",
             "No hay una sesión activa.",
             "error"
         );
-
         return;
     }
 
@@ -2958,58 +2956,45 @@ async function guardarPrestamo() {
         document.getElementById("prestamoCliente").value;
 
     if (!clienteId) {
-
         mostrarMensaje(
             "prestamoMessage",
             "Seleccioná un cliente.",
             "error"
         );
-
         return;
     }
 
     const calculo = calcularPrestamo();
 
     if (calculo.capital <= 0) {
-
         mostrarMensaje(
             "prestamoMessage",
             "Ingresá un capital válido.",
             "error"
         );
-
         return;
     }
 
     if (calculo.cantidad <= 0) {
-
         mostrarMensaje(
             "prestamoMessage",
             "La cantidad de cuotas debe ser mayor a 0.",
             "error"
         );
-
         return;
     }
 
     const frecuencia =
-        document.getElementById(
-            "prestamoFrecuencia"
-        ).value;
+        document.getElementById("prestamoFrecuencia").value;
 
     const fechaInicio =
-        document.getElementById(
-            "prestamoFecha"
-        ).value ||
-        new Date()
-            .toISOString()
-            .split("T")[0];
+        document.getElementById("prestamoFecha").value ||
+        new Date().toISOString().split("T")[0];
 
     const observaciones =
-        document.getElementById(
-            "prestamoObservaciones"
-        ).value.trim();
-
+        document.getElementById("prestamoObservaciones")
+        .value
+        .trim();
 
     try {
 
@@ -3017,66 +3002,56 @@ async function guardarPrestamo() {
            CREAR PRÉSTAMO
         ========================================= */
 
+        const datosPrestamo = {
+
+            user_id: usuarioActual.id,
+
+            cliente_id: clienteId,
+
+            fecha_inicio: fechaInicio,
+
+            monto_prestado: calculo.capital,
+
+            porcentaje_interes: calculo.interes,
+
+            porcentaje_comision: calculo.comision,
+
+            monto_comision: calculo.valorComision,
+
+            total_intereses: calculo.valorInteres,
+
+            total_a_devolver: calculo.total,
+
+            cantidad_cuotas: calculo.cantidad,
+
+            frecuencia_pago: frecuencia,
+
+            fecha_primer_vencimiento:
+                calcularPrimerVencimiento(
+                    fechaInicio,
+                    frecuencia
+                ),
+
+            observaciones: observaciones,
+
+            estado: "activo"
+
+        };
+
+
+        console.log(
+            "DATOS QUE SE ENVIAN A PRESTAMOS:",
+            datosPrestamo
+        );
+
+
         const {
             data: prestamo,
             error
         } =
         await supabaseClient
             .from("prestamos")
-            .insert([{
-
-                user_id:
-                    usuarioActual.id,
-
-                cliente_id:
-                    clienteId,
-
-                fecha_inicio:
-                    fechaInicio,
-
-                monto_prestado:
-                    calculo.capital,
-
-                tipo_interes:
-                    "porcentaje",
-
-                porcentaje_interes:
-                    calculo.interes,
-
-                tipo_comision:
-                    "porcentaje",
-
-                porcentaje_comision:
-                    calculo.comision,
-
-                monto_comision:
-                    calculo.valorComision,
-
-                total_intereses:
-                    calculo.valorInteres,
-
-                total_a_devolver:
-                    calculo.total,
-
-                cantidad_cuotas:
-                    calculo.cantidad,
-
-                frecuencia_pago:
-                    frecuencia,
-
-                fecha_primer_vencimiento:
-                    calcularPrimerVencimiento(
-                        fechaInicio,
-                        frecuencia
-                    ),
-
-                observaciones:
-                    observaciones,
-
-                estado:
-                    "activo"
-
-            }])
+            .insert(datosPrestamo)
             .select()
             .single();
 
@@ -3085,24 +3060,15 @@ async function guardarPrestamo() {
             throw error;
         }
 
-function calcularPrimerVencimiento(
-    fechaInicio,
-    frecuencia
-) {
 
-    let fecha =
-        convertirFecha(fechaInicio);
-
-    fecha =
-        sumarFrecuencia(
-            fecha,
-            frecuencia
+        console.log(
+            "PRÉSTAMO CREADO:",
+            prestamo
         );
 
-    return fechaToISO(fecha);
-}
+
         /* =========================================
-           GENERAR CUOTAS
+           CREAR CUOTAS
         ========================================= */
 
         const cuotas =
@@ -3116,6 +3082,12 @@ function calcularPrimerVencimiento(
             );
 
 
+        console.log(
+            "CUOTAS A CREAR:",
+            cuotas
+        );
+
+
         const {
             error: errorCuotas
         } =
@@ -3126,22 +3098,10 @@ function calcularPrimerVencimiento(
 
         if (errorCuotas) {
 
-            /*
-             * Si no se pudieron crear las cuotas,
-             * eliminamos el préstamo recién creado.
-             */
-
-            await supabaseClient
-                .from("prestamos")
-                .delete()
-                .eq(
-                    "id",
-                    prestamo.id
-                )
-                .eq(
-                    "user_id",
-                    usuarioActual.id
-                );
+            console.error(
+                "ERROR CREANDO CUOTAS:",
+                errorCuotas
+            );
 
             throw errorCuotas;
         }
@@ -3152,37 +3112,25 @@ function calcularPrimerVencimiento(
         ========================================= */
 
         alert(
-            "✅ PRÉSTAMO CREADO CORRECTAMENTE\n\n" +
-
-            "Préstamo generado.\n\n" +
+            "✅ PRÉSTAMO CREADO\n\n" +
 
             "Capital: " +
-            formatearPesos(
-                calculo.capital
-            ) +
+            formatearPesos(calculo.capital) +
 
             "\nInterés: " +
-            formatearPesos(
-                calculo.valorInteres
-            ) +
+            formatearPesos(calculo.valorInteres) +
 
             "\nComisión: " +
-            formatearPesos(
-                calculo.valorComision
-            ) +
+            formatearPesos(calculo.valorComision) +
 
-            "\nTotal a devolver: " +
-            formatearPesos(
-                calculo.total
-            ) +
+            "\nTotal: " +
+            formatearPesos(calculo.total) +
 
             "\nCuotas: " +
             calculo.cantidad +
 
-            "\nValor cuota: " +
-            formatearPesos(
-                calculo.cuota
-            )
+            "\nValor de cuota: " +
+            formatearPesos(calculo.cuota)
         );
 
 
@@ -3194,22 +3142,37 @@ function calcularPrimerVencimiento(
     catch (error) {
 
         console.error(
-            "ERROR CREANDO PRÉSTAMO:",
+            "ERROR COMPLETO:",
             error
         );
 
-        const detalle =
-            error?.message ||
-            error?.details ||
-            error?.hint ||
-            "Error desconocido";
+        alert(
+            "ERROR DE SUPABASE\n\n" +
+
+            "Código: " +
+            (error?.code || "N/A") +
+
+            "\n\nMensaje: " +
+            (error?.message || "N/A") +
+
+            "\n\nDetalles: " +
+            (error?.details || "N/A") +
+
+            "\n\nHint: " +
+            (error?.hint || "N/A")
+        );
+
 
         mostrarMensaje(
             "prestamoMessage",
-            "❌ No se pudo crear el préstamo: " +
-            detalle,
+            "❌ " +
+            (
+                error?.message ||
+                "No se pudo crear el préstamo."
+            ),
             "error"
         );
+
     }
 
 }
