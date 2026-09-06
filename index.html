@@ -703,38 +703,315 @@ tr:last-child td{border-bottom:0}
 
 
                 <!-- PRESTAMOS -->
-                <section id="section-prestamos" class="section">
+               <section id="section-prestamos" class="section">
 
-                    <div class="section-header">
+    <div class="section-header">
 
-                        <div>
-                            <h2>Préstamos</h2>
-                            <p>Gestioná tus préstamos</p>
-                        </div>
+        <div>
+            <h2>Préstamos</h2>
+            <p>Creá y administrá tus préstamos</p>
+        </div>
 
-                        <button class="btn btn-primary" onclick="abrirNuevoPrestamo()">
-                            ➕ Nuevo préstamo
-                        </button>
+        <button
+            class="btn btn-primary"
+            onclick="abrirNuevoPrestamo()"
+        >
+            ➕ Nuevo préstamo
+        </button>
 
-                    </div>
-
-                    <div class="module-placeholder">
-
-                        <div class="big-icon">💰</div>
-
-                        <h3>Motor de préstamos</h3>
-
-                        <p>
-                            Estamos preparando el módulo para seleccionar
-                            clientes, calcular intereses y comisiones,
-                            generar cuotas y registrar el préstamo.
-                        </p>
-
-                    </div>
-
-                </section>
+    </div>
 
 
+    <div id="prestamoPanel" class="card">
+
+        <h3 style="margin-bottom:20px">
+            Nuevo préstamo
+        </h3>
+
+
+        <div id="prestamoMessage" class="message"></div>
+
+
+        <div class="form-grid">
+
+
+            <!-- CLIENTE -->
+
+            <div class="form-group full">
+
+                <label>
+                    Cliente *
+                </label>
+
+                <select id="prestamoCliente" required>
+
+                    <option value="">
+                        Seleccionar cliente...
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- CAPITAL -->
+
+            <div class="form-group">
+
+                <label>
+                    Capital prestado *
+                </label>
+
+                <input
+                    id="prestamoCapital"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="100000"
+                    oninput="calcularPrestamo()"
+                >
+
+            </div>
+
+
+            <!-- INTERÉS -->
+
+            <div class="form-group">
+
+                <label>
+                    Interés (%)
+                </label>
+
+                <input
+                    id="prestamoInteres"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                    oninput="calcularPrestamo()"
+                >
+
+            </div>
+
+
+            <!-- COMISIÓN -->
+
+            <div class="form-group">
+
+                <label>
+                    Comisión (%)
+                </label>
+
+                <input
+                    id="prestamoComision"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value="0"
+                    oninput="calcularPrestamo()"
+                >
+
+            </div>
+
+
+            <!-- FRECUENCIA -->
+
+            <div class="form-group">
+
+                <label>
+                    Frecuencia
+                </label>
+
+                <select
+                    id="prestamoFrecuencia"
+                    onchange="calcularPrestamo()"
+                >
+
+                    <option value="diaria">
+                        Diaria
+                    </option>
+
+                    <option value="semanal" selected>
+                        Semanal
+                    </option>
+
+                    <option value="mensual">
+                        Mensual
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- CANTIDAD -->
+
+            <div class="form-group">
+
+                <label>
+                    Cantidad de cuotas
+                </label>
+
+                <input
+                    id="prestamoCantidad"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="5"
+                    oninput="calcularPrestamo()"
+                >
+
+            </div>
+
+
+            <!-- FECHA -->
+
+            <div class="form-group">
+
+                <label>
+                    Fecha de inicio
+                </label>
+
+                <input
+                    id="prestamoFecha"
+                    type="date"
+                >
+
+            </div>
+
+
+            <!-- OBSERVACIONES -->
+
+            <div class="form-group full">
+
+                <label>
+                    Observaciones
+                </label>
+
+                <textarea
+                    id="prestamoObservaciones"
+                    rows="3"
+                    placeholder="Información adicional..."
+                ></textarea>
+
+            </div>
+
+        </div>
+
+
+        <!-- RESUMEN -->
+
+        <div
+            style="
+                margin-top:20px;
+                padding:20px;
+                background:#f8fafc;
+                border-radius:12px;
+            "
+        >
+
+            <h3 style="margin-bottom:15px">
+                Resumen del préstamo
+            </h3>
+
+            <div
+                class="profile-grid"
+                style="gap:10px"
+            >
+
+                <div class="profile-item">
+                    <small>Interés</small>
+                    <strong id="resumenInteres">$0</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Comisión</small>
+                    <strong id="resumenComision">$0</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Total a devolver</small>
+                    <strong id="resumenTotal">$0</strong>
+                </div>
+
+                <div class="profile-item">
+                    <small>Valor de cuota</small>
+                    <strong id="resumenCuota">$0</strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            style="
+                display:flex;
+                justify-content:flex-end;
+                gap:10px;
+                margin-top:20px;
+            "
+        >
+
+            <button
+                class="btn btn-secondary"
+                onclick="cancelarNuevoPrestamo()"
+            >
+                Cancelar
+            </button>
+
+            <button
+                class="btn btn-primary"
+                onclick="guardarPrestamo()"
+            >
+                💾 Crear préstamo
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- LISTADO -->
+
+    <div
+        class="card"
+        style="margin-top:20px"
+    >
+
+        <h3 style="margin-bottom:15px">
+            Préstamos registrados
+        </h3>
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>Cliente</th>
+                        <th>Capital</th>
+                        <th>Cuotas</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="prestamosTableBody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
                 <!-- CUOTAS -->
                 <section id="section-cuotas" class="section">
 
