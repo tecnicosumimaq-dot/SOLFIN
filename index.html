@@ -3143,25 +3143,27 @@ async function guardarPrestamo() {
         limpiarFormularioPrestamo();
 
         await cargarPrestamos();
+    } catch (error) {
 
+        console.error("ERROR COMPLETO:", error);
 
-   } catch (error) {
+        const detalle =
+            error?.message ||
+            error?.details ||
+            error?.hint ||
+            "Error desconocido";
 
-    console.error("ERROR COMPLETO:", error);
+        mostrarMensaje(
+            "prestamoMessage",
+            "❌ Error: " + detalle,
+            "error"
+        );
 
-    const detalle =
-        error?.message ||
-        error?.details ||
-        error?.hint ||
-        "Error desconocido";
-
-    mostrarMensaje(
-        "prestamoMessage",
-        "❌ Error: " + detalle,
-        "error"
-    );
+    }
 
 }
+
+ 
 /* =========================================================
    GENERAR CUOTAS
 ========================================================= */
