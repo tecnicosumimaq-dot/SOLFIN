@@ -2941,10 +2941,7 @@ function calcularPrestamo() {
 
 async function guardarPrestamo() {
 
-    limpiarMensaje(
-        "prestamoMessage"
-    );
-
+    limpiarMensaje("prestamoMessage");
 
     if (!usuarioActual) {
 
@@ -2959,9 +2956,7 @@ async function guardarPrestamo() {
 
 
     const clienteId =
-        document.getElementById(
-            "prestamoCliente"
-        ).value;
+        document.getElementById("prestamoCliente").value;
 
 
     if (!clienteId) {
@@ -2976,8 +2971,7 @@ async function guardarPrestamo() {
     }
 
 
-    const calculo =
-        calcularPrestamo();
+    const calculo = calcularPrestamo();
 
 
     if (calculo.capital <= 0) {
@@ -3005,28 +2999,82 @@ async function guardarPrestamo() {
 
 
     const frecuencia =
-        document.getElementById(
-            "prestamoFrecuencia"
-        ).value;
+        document.getElementById("prestamoFrecuencia").value;
 
 
     const fechaInicio =
-        document.getElementById(
-            "prestamoFecha"
-        ).value;
+        document.getElementById("prestamoFecha").value ||
+        new Date().toISOString().split("T")[0];
 
 
     const observaciones =
-        document.getElementById(
-            "prestamoObservaciones"
-        ).value.trim();
+        document.getElementById("prestamoObservaciones")
+        .value
+        .trim();
 
 
     try {
 
-        /*
-         * CREAR PRÉSTAMO
-         */
+        /* =========================================
+           1. OBTENER NÚMERO DEL PRÉSTAMO
+        ========================================= */
+
+        const {
+            data: prestamosExistentes,
+            error: errorNumero
+        } =
+        await supabaseClient
+            .from("prestamos")
+            .select("numero_prestamo")
+            .eq("user_id", usuarioActual.id)
+            .order("numero_prestamo", {
+                ascending: false
+            })
+            .limit(1);
+
+
+        if (errorNumero) {
+            throw errorNumero;
+        }
+
+
+        const ultimoNumero =
+            prestamosExistentes &&
+            prestamosExistentes.length > 0
+                ? Number(
+                    prestamosExistentes[0].numero_prestamo
+                  )
+                : 0;
+
+
+        const numeroPrestamo =
+            ultimoNumero + 1;
+
+
+        /* =========================================
+           2. CALCULAR PRIMER VENCIMIENTO
+        ========================================= */
+
+        let fechaPrimerVencimiento =
+            convertirFecha(fechaInicio);
+
+
+        fechaPrimerVencimiento =
+            sumarFrecuencia(
+                fechaPrimerVencimiento,
+                frecuencia
+            );
+
+
+        fechaPrimerVencimiento =
+            fechaToISO(
+                fechaPrimerVencimiento
+            );
+
+
+        /* =========================================
+           3. CREAR PRÉSTAMO
+        ========================================= */
 
         const {
             data: prestamo,
@@ -3042,38 +3090,50 @@ async function guardarPrestamo() {
                 cliente_id:
                     clienteId,
 
-                capital:
+                numero_prestamo:
+                    numeroPrestamo,
+
+                fecha_inicio:
+                    fechaInicio,
+
+                monto_prestado:
                     calculo.capital,
+
+                tipo_interes:
+                    "porcentaje",
 
                 porcentaje_interes:
                     calculo.interes,
 
+                tipo_comision:
+                    "porcentaje",
+
                 porcentaje_comision:
                     calculo.comision,
 
-                frecuencia:
-                    frecuencia,
+                monto_comision:
+                    calculo.valorComision,
+
+                total_intereses:
+                    calculo.valorInteres,
+
+                total_a_devolver:
+                    calculo.total,
 
                 cantidad_cuotas:
                     calculo.cantidad,
 
-                total_devolver:
-                    calculo.total,
+                frecuencia_pago:
+                    frecuencia,
 
-                valor_cuota:
-                    calculo.cuota,
-
-                fecha_inicio:
-                    fechaInicio ||
-                    new Date()
-                        .toISOString()
-                        .split("T")[0],
-
-                estado:
-                    "activo",
+                fecha_primer_vencimiento:
+                    fechaPrimerVencimiento,
 
                 observaciones:
-                    observaciones
+                    observaciones,
+
+                estado:
+                    "activo"
 
             }])
             .select()
@@ -3085,9 +3145,9 @@ async function guardarPrestamo() {
         }
 
 
-        /*
-         * GENERAR CUOTAS
-         */
+        /* =========================================
+           4. CREAR CUOTAS
+        ========================================= */
 
         const cuotas =
             generarCuotas(
@@ -3095,11 +3155,7 @@ async function guardarPrestamo() {
                 {
                     ...calculo,
                     frecuencia,
-                    fechaInicio:
-                        fechaInicio ||
-                        new Date()
-                            .toISOString()
-                            .split("T")[0]
+                    fechaInicio
                 }
             );
 
@@ -3115,9 +3171,8 @@ async function guardarPrestamo() {
         if (errorCuotas) {
 
             /*
-             * Si falla la creación de cuotas,
-             * eliminamos el préstamo para
-             * evitar datos incompletos.
+             * Si las cuotas fallan,
+             * eliminamos el préstamo.
              */
 
             await supabaseClient
@@ -3126,26 +3181,59 @@ async function guardarPrestamo() {
                 .eq(
                     "id",
                     prestamo.id
+                )
+                .eq(
+                    "user_id",
+                    usuarioActual.id
                 );
 
             throw errorCuotas;
         }
 
 
+        /* =========================================
+           5. ÉXITO
+        ========================================= */
+
         alert(
-            "✅ Préstamo creado correctamente.\n\n" +
-            `Total: ${formatearPesos(calculo.total)}\n` +
-            `Cuotas: ${calculo.cantidad}\n` +
-            `Valor: ${formatearPesos(calculo.cuota)}`
+            "✅ PRÉSTAMO CREADO\n\n" +
+            "N.º de préstamo: " +
+            numeroPrestamo +
+            "\n\n" +
+            "Capital: " +
+            formatearPesos(calculo.capital) +
+            "\n" +
+            "Interés: " +
+            formatearPesos(calculo.valorInteres) +
+            "\n" +
+            "Comisión: " +
+            formatearPesos(calculo.valorComision) +
+            "\n" +
+            "Total: " +
+            formatearPesos(calculo.total) +
+            "\n" +
+            "Cuotas: " +
+            calculo.cantidad +
+            "\n" +
+            "Valor cuota: " +
+            formatearPesos(calculo.cuota)
         );
 
 
         limpiarFormularioPrestamo();
 
         await cargarPrestamos();
+
+        cargarClientesParaPrestamo();
+
+
     } catch (error) {
 
-        console.error("ERROR COMPLETO:", error);
+        console.error(
+            "ERROR CREANDO PRÉSTAMO:",
+            error
+        );
+
 
         const detalle =
             error?.message ||
@@ -3153,16 +3241,17 @@ async function guardarPrestamo() {
             error?.hint ||
             "Error desconocido";
 
+
         mostrarMensaje(
             "prestamoMessage",
-            "❌ Error: " + detalle,
+            "❌ No se pudo crear el préstamo: " +
+            detalle,
             "error"
         );
 
     }
 
 }
-
  
 /* =========================================================
    GENERAR CUOTAS
