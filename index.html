@@ -3853,6 +3853,1065 @@ function formatearPesos(valor) {
     );
 
 }
+  /* =========================================================
+   CUOTAS Y PAGOS
+========================================================= */
+
+let todasLasCuotas = [];
+let todosLosPagos = [];
+let cuotaSeleccionada = null;
+
+
+/* =========================================================
+   CARGAR CUOTAS
+========================================================= */
+
+async function cargarCuotas() {
+
+    if (!usuarioActual) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+        .from("cuotas")
+        .select(`
+            id,
+            user_id,
+            prestamo_id,
+            numero_cuota,
+            fecha_vencimiento,
+            importe,
+            importe_pagado,
+            saldo,
+            estado
+        `)
+        .eq(
+            "user_id",
+            usuarioActual.id
+        )
+        .order(
+            "fecha_vencimiento",
+            {
+                ascending: true
+            }
+        );
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando cuotas:",
+            error
+        );
+
+        return;
+    }
+
+
+    todasLasCuotas =
+        data || [];
+
+
+    /*
+     * Actualizamos estados según
+     * fecha y saldo.
+     */
+
+    todasLasCuotas =
+        todasLasCuotas.map(cuota => {
+
+            const saldo =
+                Number(
+                    cuota.saldo || 0
+                );
+
+            const pagado =
+                Number(
+                    cuota.importe_pagado || 0
+                );
+
+            let estado =
+                cuota.estado ||
+                "pendiente";
+
+
+            if (saldo <= 0.01) {
+
+                estado = "pagada";
+
+            } else if (
+                cuota.fecha_vencimiento &&
+                convertirFecha(
+                    cuota.fecha_vencimiento
+                ) < fechaHoy()
+            ) {
+
+                estado = "vencida";
+
+            } else {
+
+                estado = "pendiente";
+
+            }
+
+
+            return {
+                ...cuota,
+                saldo,
+                pagado,
+                estado
+            };
+
+        });
+
+
+    mostrarCuotas(
+        todasLasCuotas
+    );
+
+
+    actualizarEstadisticasCuotas(
+        todasLasCuotas
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR CUOTAS
+========================================================= */
+
+function mostrarCuotas(
+    cuotas
+) {
+
+    const tbody =
+        document.getElementById(
+            "cuotasTableBody"
+        );
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    if (!cuotas.length) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="8">
+
+                    <div class="empty-state">
+
+                        <div style="font-size:45px">
+                            📅
+                        </div>
+
+                        No hay cuotas registradas.
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML =
+        cuotas.map(cuota => {
+
+            const cliente =
+                obtenerClienteDeCuota(
+                    cuota
+                );
+
+
+            const nombreCliente =
+                cliente
+                    ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+                    : "Cliente";
+
+
+            let claseEstado =
+                "";
+
+            if (
+                cuota.estado ===
+                "pagada"
+            ) {
+
+                claseEstado =
+                    "style='color:#166534;font-weight:700'";
+
+            } else if (
+                cuota.estado ===
+                "vencida"
+            ) {
+
+                claseEstado =
+                    "style='color:#991b1b;font-weight:700'";
+
+            } else {
+
+                claseEstado =
+                    "style='color:#92400e;font-weight:700'";
+
+            }
+
+
+            const puedePagar =
+                cuota.estado !==
+                "pagada";
+
+
+            return `
+
+                <tr>
+
+                    <td>
+                        <strong>
+                            ${escapeHTML(
+                                nombreCliente
+                            )}
+                        </strong>
+                    </td>
+
+                    <td>
+                        #${cuota.numero_cuota}
+                    </td>
+
+                    <td>
+                        ${formatearFecha(
+                            cuota.fecha_vencimiento
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatearPesos(
+                            cuota.importe
+                        )}
+                    </td>
+
+                    <td>
+                        ${formatearPesos(
+                            cuota.importe_pagado
+                        )}
+                    </td>
+
+                    <td>
+                        <strong>
+                            ${formatearPesos(
+                                cuota.saldo
+                            )}
+                        </strong>
+                    </td>
+
+                    <td ${claseEstado}>
+                        ${escapeHTML(
+                            cuota.estado
+                        )}
+                    </td>
+
+                    <td>
+
+                        ${
+                            puedePagar
+
+                            ?
+
+                            `<button
+                                class="btn btn-success"
+                                style="padding:7px 10px"
+                                onclick="abrirModalPago('${cuota.id}')"
+                            >
+                                💵 Cobrar
+                            </button>`
+
+                            :
+
+                            `<span style="color:#64748b">
+                                ✅ Completa
+                             </span>`
+                        }
+
+                    </td>
+
+                </tr>
+
+            `;
+
+        }).join("");
+
+}
+
+
+/* =========================================================
+   OBTENER CLIENTE
+========================================================= */
+
+function obtenerClienteDeCuota(
+    cuota
+) {
+
+    /*
+     * Primero buscamos el préstamo
+     * correspondiente.
+     */
+
+    const prestamo =
+        todosLosPrestamos.find(
+            p => p.id === cuota.prestamo_id
+        );
+
+
+    if (
+        prestamo &&
+        prestamo.clientes
+    ) {
+
+        return prestamo.clientes;
+
+    }
+
+
+    /*
+     * Como respaldo buscamos
+     * entre los clientes cargados.
+     */
+
+    if (
+        prestamo &&
+        prestamo.cliente_id
+    ) {
+
+        return todosLosClientes.find(
+            c => c.id === prestamo.cliente_id
+        );
+
+    }
+
+
+    return null;
+
+}
+
+
+/* =========================================================
+   ESTADÍSTICAS DE CUOTAS
+========================================================= */
+
+function actualizarEstadisticasCuotas(
+    cuotas
+) {
+
+    const pendientes =
+        cuotas.filter(
+            c => c.estado === "pendiente"
+        ).length;
+
+
+    const vencidas =
+        cuotas.filter(
+            c => c.estado === "vencida"
+        ).length;
+
+
+    const pagadas =
+        cuotas.filter(
+            c => c.estado === "pagada"
+        ).length;
+
+
+    const saldo =
+        cuotas.reduce(
+            (
+                total,
+                cuota
+            ) =>
+                total +
+                Number(
+                    cuota.saldo || 0
+                ),
+            0
+        );
+
+
+    document.getElementById(
+        "cuotasPendientes"
+    ).textContent =
+        pendientes;
+
+
+    document.getElementById(
+        "cuotasVencidas"
+    ).textContent =
+        vencidas;
+
+
+    document.getElementById(
+        "cuotasPagadas"
+    ).textContent =
+        pagadas;
+
+
+    document.getElementById(
+        "saldoCuotas"
+    ).textContent =
+        formatearPesos(saldo);
+
+}
+
+
+/* =========================================================
+   BUSCAR CUOTAS
+========================================================= */
+
+function filtrarCuotas() {
+
+    const texto =
+        document.getElementById(
+            "buscarCuota"
+        )
+        .value
+        .toLowerCase()
+        .trim();
+
+
+    const filtradas =
+        todasLasCuotas.filter(
+            cuota => {
+
+                const cliente =
+                    obtenerClienteDeCuota(
+                        cuota
+                    );
+
+
+                const nombre =
+                    cliente
+                        ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+                            .toLowerCase()
+                        : "";
+
+
+                return nombre.includes(
+                    texto
+                );
+
+            }
+        );
+
+
+    mostrarCuotas(
+        filtradas
+    );
+
+}
+
+
+/* =========================================================
+   MODAL DE PAGO
+========================================================= */
+
+function abrirModalPago(
+    cuotaId
+) {
+
+    const cuota =
+        todasLasCuotas.find(
+            c => c.id === cuotaId
+        );
+
+
+    if (!cuota) {
+        return;
+    }
+
+
+    cuotaSeleccionada =
+        cuota;
+
+
+    const cliente =
+        obtenerClienteDeCuota(
+            cuota
+        );
+
+
+    const nombreCliente =
+        cliente
+            ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+            : "Cliente";
+
+
+    document.getElementById(
+        "pagoCuotaId"
+    ).value =
+        cuota.id;
+
+
+    document.getElementById(
+        "pagoPrestamoId"
+    ).value =
+        cuota.prestamo_id;
+
+
+    document.getElementById(
+        "pagoCliente"
+    ).textContent =
+        nombreCliente;
+
+
+    document.getElementById(
+        "pagoNumeroCuota"
+    ).textContent =
+        "#" +
+        cuota.numero_cuota;
+
+
+    document.getElementById(
+        "pagoImporteCuota"
+    ).textContent =
+        formatearPesos(
+            cuota.importe
+        );
+
+
+    document.getElementById(
+        "pagoSaldoActual"
+    ).textContent =
+        formatearPesos(
+            cuota.saldo
+        );
+
+
+    document.getElementById(
+        "pagoImporte"
+    ).value =
+        Number(
+            cuota.saldo
+        ).toFixed(2);
+
+
+    document.getElementById(
+        "pagoObservacion"
+    ).value =
+        "";
+
+
+    limpiarMensaje(
+        "pagoMessage"
+    );
+
+
+    document.getElementById(
+        "pagoModal"
+    ).classList.add("show");
+
+}
+
+
+/* =========================================================
+   CERRAR MODAL
+========================================================= */
+
+function cerrarModalPago() {
+
+    document.getElementById(
+        "pagoModal"
+    ).classList.remove("show");
+
+    cuotaSeleccionada =
+        null;
+
+}
+
+
+/* =========================================================
+   GUARDAR PAGO
+========================================================= */
+
+async function guardarPago() {
+
+    limpiarMensaje(
+        "pagoMessage"
+    );
+
+
+    if (
+        !usuarioActual ||
+        !cuotaSeleccionada
+    ) {
+
+        mostrarMensaje(
+            "pagoMessage",
+            "No se encontró la cuota seleccionada.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const importe =
+        Number(
+            document.getElementById(
+                "pagoImporte"
+            ).value
+        );
+
+
+    if (
+        !Number.isFinite(importe) ||
+        importe <= 0
+    ) {
+
+        mostrarMensaje(
+            "pagoMessage",
+            "Ingresá un importe válido.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const saldoActual =
+        Number(
+            cuotaSeleccionada.saldo || 0
+        );
+
+
+    if (
+        importe >
+        saldoActual + 0.01
+    ) {
+
+        mostrarMensaje(
+            "pagoMessage",
+            "El pago no puede superar el saldo pendiente.",
+            "error"
+        );
+
+        return;
+    }
+
+
+    const medioPago =
+        document.getElementById(
+            "pagoMedio"
+        ).value;
+
+
+    const observacion =
+        document.getElementById(
+            "pagoObservacion"
+        ).value.trim();
+
+
+    try {
+
+        /* =========================================
+           1. REGISTRAR PAGO
+        ========================================= */
+
+        const {
+            error: errorPago
+        } =
+        await supabaseClient
+            .from("pagos")
+            .insert([{
+
+                user_id:
+                    usuarioActual.id,
+
+                prestamo_id:
+                    cuotaSeleccionada.prestamo_id,
+
+                cuota_id:
+                    cuotaSeleccionada.id,
+
+                importe:
+                    Number(
+                        importe.toFixed(2)
+                    ),
+
+                medio_pago:
+                    medioPago,
+
+                observacion:
+                    observacion
+
+            }]);
+
+
+        if (errorPago) {
+            throw errorPago;
+        }
+
+
+        /* =========================================
+           2. CALCULAR NUEVO SALDO
+        ========================================= */
+
+        const nuevoImportePagado =
+            Number(
+                (
+                    Number(
+                        cuotaSeleccionada.importe_pagado || 0
+                    ) +
+                    importe
+                ).toFixed(2)
+            );
+
+
+        const nuevoSaldo =
+            Number(
+                (
+                    Number(
+                        cuotaSeleccionada.importe || 0
+                    ) -
+                    nuevoImportePagado
+                ).toFixed(2)
+            );
+
+
+        const nuevoEstado =
+            nuevoSaldo <= 0.01
+                ? "pagada"
+                : (
+                    convertirFecha(
+                        cuotaSeleccionada.fecha_vencimiento
+                    ) < fechaHoy()
+                        ? "vencida"
+                        : "pendiente"
+                );
+
+
+        /* =========================================
+           3. ACTUALIZAR CUOTA
+        ========================================= */
+
+        const {
+            error: errorCuota
+        } =
+        await supabaseClient
+            .from("cuotas")
+            .update({
+
+                importe_pagado:
+                    nuevoImportePagado,
+
+                saldo:
+                    Math.max(
+                        0,
+                        nuevoSaldo
+                    ),
+
+                estado:
+                    nuevoEstado
+
+            })
+            .eq(
+                "id",
+                cuotaSeleccionada.id
+            )
+            .eq(
+                "user_id",
+                usuarioActual.id
+            );
+
+
+        if (errorCuota) {
+            throw errorCuota;
+        }
+
+
+        alert(
+            "✅ PAGO REGISTRADO\n\n" +
+            "Importe: " +
+            formatearPesos(importe) +
+            "\nSaldo restante: " +
+            formatearPesos(
+                Math.max(
+                    0,
+                    nuevoSaldo
+                )
+            )
+        );
+
+
+        cerrarModalPago();
+
+
+        await cargarCuotas();
+
+        await cargarPagos();
+
+
+    }
+    catch (error) {
+
+        console.error(
+            "ERROR REGISTRANDO PAGO:",
+            error
+        );
+
+
+        mostrarMensaje(
+            "pagoMessage",
+            "❌ " +
+            (
+                error?.message ||
+                "No se pudo registrar el pago."
+            ),
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   CARGAR PAGOS
+========================================================= */
+
+async function cargarPagos() {
+
+    if (!usuarioActual) {
+        return;
+    }
+
+
+    const {
+        data,
+        error
+    } =
+    await supabaseClient
+        .from("pagos")
+        .select("*")
+        .eq(
+            "user_id",
+            usuarioActual.id
+        )
+        .order(
+            "fecha_pago",
+            {
+                ascending: false
+            }
+        )
+        .order(
+            "created_at",
+            {
+                ascending: false
+            }
+        );
+
+
+    if (error) {
+
+        console.error(
+            "Error cargando pagos:",
+            error
+        );
+
+        return;
+    }
+
+
+    todosLosPagos =
+        data || [];
+
+
+    mostrarPagos(
+        todosLosPagos
+    );
+
+}
+
+
+/* =========================================================
+   MOSTRAR PAGOS
+========================================================= */
+
+function mostrarPagos(
+    pagos
+) {
+
+    const tbody =
+        document.getElementById(
+            "pagosTableBody"
+        );
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    if (!pagos.length) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="5">
+
+                    <div class="empty-state">
+
+                        <div style="font-size:45px">
+                            💵
+                        </div>
+
+                        No hay pagos registrados.
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML =
+        pagos.map(
+            pago => {
+
+                const cuota =
+                    todasLasCuotas.find(
+                        c =>
+                            c.id ===
+                            pago.cuota_id
+                    );
+
+
+                const cliente =
+                    cuota
+                        ? obtenerClienteDeCuota(cuota)
+                        : null;
+
+
+                const nombreCliente =
+                    cliente
+                        ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+                        : "Cliente";
+
+
+                return `
+
+                    <tr>
+
+                        <td>
+                            ${formatearFecha(
+                                pago.fecha_pago
+                            )}
+                        </td>
+
+                        <td>
+                            <strong>
+                                ${escapeHTML(
+                                    nombreCliente
+                                )}
+                            </strong>
+                        </td>
+
+                        <td>
+                            ${formatearPesos(
+                                pago.importe
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHTML(
+                                pago.medio_pago || "-"
+                            )}
+                        </td>
+
+                        <td>
+                            ${escapeHTML(
+                                pago.observacion || "-"
+                            )}
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        ).join("");
+
+}
+
+
+/* =========================================================
+   FECHA DE HOY
+========================================================= */
+
+function fechaHoy() {
+
+    const ahora =
+        new Date();
+
+
+    return new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate()
+    );
+
+}
+
+
+/* =========================================================
+   FORMATEAR FECHA
+========================================================= */
+
+function formatearFecha(
+    fecha
+) {
+
+    if (!fecha) {
+        return "-";
+    }
+
+
+    const partes =
+        String(fecha)
+            .split("-")
+            .map(Number);
+
+
+    if (
+        partes.length !== 3
+    ) {
+        return String(fecha);
+    }
+
+
+    return [
+        String(partes[2]).padStart(2, "0"),
+        String(partes[1]).padStart(2, "0"),
+        partes[0]
+    ].join("/");
+
+}
     /* =========================================================
    INICIO
 ========================================================= */
