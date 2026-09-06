@@ -3145,26 +3145,23 @@ async function guardarPrestamo() {
         await cargarPrestamos();
 
 
-    } catch (error) {
+   } catch (error) {
 
-        console.error(
-            "Error creando préstamo:",
-            error
-        );
+    console.error("ERROR COMPLETO:", error);
 
+    const detalle =
+        error?.message ||
+        error?.details ||
+        error?.hint ||
+        "Error desconocido";
 
-        mostrarMensaje(
-            "prestamoMessage",
-            "No se pudo crear el préstamo: " +
-            error.message,
-            "error"
-        );
-
-    }
+    mostrarMensaje(
+        "prestamoMessage",
+        "❌ Error: " + detalle,
+        "error"
+    );
 
 }
-
-
 /* =========================================================
    GENERAR CUOTAS
 ========================================================= */
