@@ -2449,8 +2449,7 @@ function cerrarFicha(){
    NAVEGACIÓN
 ========================================================= */
 
-function mostrarSeccion(nombre,boton){
-
+async function mostrarSeccion(nombre,boton){
     document.querySelectorAll(".section")
         .forEach(s=>s.classList.remove("active"));
 
@@ -2466,7 +2465,15 @@ if (nombre === "prestamos") {
     cargarClientesParaPrestamo();
     cargarPrestamos();
 }
+if (nombre === "cuotas") {
+    cargarPrestamos();
+    await cargarCuotas();
+}
 
+if (nombre === "pagos") {
+    await cargarCuotas();
+    await cargarPagos();
+}
     document.querySelectorAll(".nav button")
         .forEach(b=>b.classList.remove("active"));
 
