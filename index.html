@@ -538,6 +538,12 @@ tr:last-child td{border-bottom:0}
                 <button onclick="mostrarSeccion('configuracion',this)">
                     ⚙️ Configuración
                 </button>
+                <button
+    id="adminNavButton"
+    class="hidden"
+    onclick="mostrarSeccion('administracion',this)">
+    👑 Administración
+</button>
 
             </nav>
 
@@ -779,6 +785,143 @@ tr:last-child td{border-bottom:0}
                     <div class="card">
 
                         <h2>Configuración</h2>
+                        <!-- =====================================================
+     ADMINISTRACIÓN
+====================================================== -->
+
+<section id="section-administracion" class="section">
+
+    <div class="section-header">
+
+        <div>
+            <h2>Administración</h2>
+            <p>Control de usuarios y accesos de SOLFIN</p>
+        </div>
+
+    </div>
+
+
+    <div class="stats-grid">
+
+        <div class="stat-card">
+
+            <div>
+                <h4>TOTAL USUARIOS</h4>
+                <strong id="adminTotalUsuarios">0</strong>
+            </div>
+
+            <div class="stat-icon">👥</div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div>
+                <h4>PENDIENTES</h4>
+                <strong id="adminPendientes">0</strong>
+            </div>
+
+            <div class="stat-icon">⏳</div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div>
+                <h4>ACTIVOS</h4>
+                <strong id="adminActivos">0</strong>
+            </div>
+
+            <div class="stat-icon">✅</div>
+
+        </div>
+
+
+        <div class="stat-card">
+
+            <div>
+                <h4>BLOQUEADOS</h4>
+                <strong id="adminBloqueados">0</strong>
+            </div>
+
+            <div class="stat-icon">🚫</div>
+
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:10px;
+                margin-bottom:18px;
+            "
+        >
+
+            <h3>
+                Usuarios registrados
+            </h3>
+
+            <button
+                class="btn btn-secondary"
+                onclick="cargarUsuariosAdmin()"
+            >
+                🔄 Actualizar
+            </button>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Usuario
+                        </th>
+
+                        <th>
+                            Email
+                        </th>
+
+                        <th>
+                            Estado
+                        </th>
+
+                        <th>
+                            Rol
+                        </th>
+
+                        <th>
+                            Acciones
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="usuariosAdminBody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</section>
 
                         <p id="configEstado"
                            style="margin-top:10px;color:var(--muted)">
