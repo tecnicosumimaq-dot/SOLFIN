@@ -3180,7 +3180,20 @@ async function guardarPrestamo() {
 /* =========================================================
    GENERAR CUOTAS
 ========================================================= */
+function calcularPrimerVencimiento(
+    fechaInicio,
+    frecuencia
+) {
 
+    let fecha = convertirFecha(fechaInicio);
+
+    fecha = sumarFrecuencia(
+        fecha,
+        frecuencia
+    );
+
+    return fechaToISO(fecha);
+}
 function generarCuotas(
     prestamo,
     datos
