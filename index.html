@@ -2225,30 +2225,29 @@ function abrirNuevoPrestamo() {
 
     mostrarSeccionPorId("prestamos");
 
-    const panel =
-        document.getElementById("prestamoPanel");
-
-    if (panel) {
-        panel.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-        });
-    }
-
     cargarClientesParaPrestamo();
 
     const fecha =
         document.getElementById("prestamoFecha");
 
-    if (
-        fecha &&
-        !fecha.value
-    ) {
+    if (fecha && !fecha.value) {
 
         fecha.value =
             new Date()
                 .toISOString()
                 .split("T")[0];
+
+    }
+
+    const panel =
+        document.getElementById("prestamoPanel");
+
+    if (panel) {
+
+        panel.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
 
     }
 
