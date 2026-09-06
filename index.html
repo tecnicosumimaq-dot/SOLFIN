@@ -2786,47 +2786,14 @@ let todosLosPrestamos = [];
    CLIENTES PARA PRÉSTAMO
 ========================================================= */
 
-async function cargarClientesParaPrestamo() {
-
-    if (!usuarioActual) {
-        return;
-    }
-
+function cargarClientesParaPrestamo() {
 
     const select =
-        document.getElementById(
-            "prestamoCliente"
-        );
+        document.getElementById("prestamoCliente");
 
     if (!select) {
         return;
     }
-
-
-    const {
-        data,
-        error
-    } =
-    await supabaseClient
-        .from("clientes")
-        .select("id,nombre,apellido,dni")
-        .eq(
-            "user_id",
-            usuarioActual.id
-        )
-        .order("nombre");
-
-
-    if (error) {
-
-        console.error(
-            "Error cargando clientes:",
-            error
-        );
-
-        return;
-    }
-
 
     select.innerHTML = `
         <option value="">
@@ -2834,18 +2801,26 @@ async function cargarClientesParaPrestamo() {
         </option>
     `;
 
+    if (!todosLosClientes || todosLosClientes.length === 0) {
 
-    (data || []).forEach(cliente => {
+        select.innerHTML = `
+            <option value="">
+                No hay clientes registrados
+            </option>
+        `;
+
+        return;
+    }
+
+    todosLosClientes.forEach(cliente => {
 
         const option =
             document.createElement("option");
 
-        option.value =
-            cliente.id;
+        option.value = cliente.id;
 
         option.textContent =
-            `${cliente.nombre || ""} ${cliente.apellido || ""}`
-            +
+            `${cliente.nombre || ""} ${cliente.apellido || ""}` +
             (
                 cliente.dni
                     ? ` - DNI ${cliente.dni}`
@@ -2857,7 +2832,6 @@ async function cargarClientesParaPrestamo() {
     });
 
 }
-
 
 /* =========================================================
    CALCULAR PRÉSTAMO
