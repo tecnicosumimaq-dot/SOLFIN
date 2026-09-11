@@ -1627,6 +1627,8 @@ tr:last-child td{border-bottom:0}
     </div>
 
 </div>
+
+
 <script>
 /* =========================================================
    CONFIGURACIÓN SUPABASE
@@ -1929,9 +1931,8 @@ prepararPanelAdmin();
 cargarPrestamos();
 cargarCuotas();
 cargarPagos();
-
-
 }
+
 /* =========================================================
    CERRAR SESIÓN
 ========================================================= */
@@ -2519,6 +2520,12 @@ function irPrestamos(){
 
 }
 
+
+function mostrarSeccionPorId(nombre) {
+    const boton = [...document.querySelectorAll(".nav button")]
+        .find(b => b.textContent.includes(nombre === "prestamos" ? "Préstamos" : nombre));
+    return mostrarSeccion(nombre, boton);
+}
 
 function abrirNuevoPrestamo() {
 
@@ -3638,6 +3645,159 @@ function sumarFrecuencia(
    CARGAR PRÉSTAMOS
 ========================================================= */
 
+async function cargarPrestamos() {
+    if (!usuarioActual) return;
+
+    const { data, error } = await supabaseClient
+        .from("prestamos")
+        .select(`
+            id,
+            cliente_id,
+            numero_prestamo,
+            fecha_inicio,
+            monto_prestado,
+            tipo_interes,
+            porcentaje_interes,
+            tipo_comision,
+            porcentaje_comision,
+            monto_comision,
+            total_intereses,
+            total_a_devolver,
+            cantidad_cuotas,
+            frecuencia_pago,
+            fecha_primer_vencimiento,
+            observaciones,
+            estado,
+            clientes (nombre, apellido, dni)
+        `)
+        .eq("user_id", usuarioActual.id)
+        .order("numero_prestamo", { ascending: false });
+
+    if (error) {
+        console.error("Error cargando préstamos:", error);
+        return;
+    }
+
+    todosLosPrestamos = data || [];
+    mostrarPrestamos(todosLosPrestamos);
+}
+
+function mostrarPrestamos(prestamos) {
+    const tbody = document.getElementById("prestamosTableBody");
+    if (!tbody) return;
+
+    if (!prestamos.length) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">💰 No hay préstamos registrados.</div></td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = prestamos.map(prestamo => {
+        const cliente = prestamo.clientes;
+        const nombre = cliente ? `${cliente.nombre || ""} ${cliente.apellido || ""}`.trim() : "Cliente";
+        return `<tr>
+            <td><strong>#${prestamo.numero_prestamo || "-"}</strong><br><span style="font-size:13px">${escapeHTML(nombre)}</span></td>
+            <td>${formatearPesos(prestamo.monto_prestado)}</td>
+            <td>${prestamo.cantidad_cuotas || 0} ${escapeHTML(prestamo.frecuencia_pago || "")}</td>
+            <td>${formatearPesos(prestamo.total_a_devolver)}</td>
+            <td style="color:#166534;font-weight:700">${escapeHTML(prestamo.estado || "activo")}</td>
+        </tr>`;
+    }).join("");
+}
+
+function mostrarPrestamos(
+    prestamos
+) {
+
+    const tbody =
+        document.getElementById(
+            "prestamosTableBody"
+        );
+
+
+    if (!tbody) {
+        return;
+    }
+
+
+    if (!prestamos.length) {
+
+        tbody.innerHTML = `
+
+            <tr>
+
+                <td colspan="5">
+
+                    <div class="empty-state">
+                        💰 No hay préstamos registrados.
+                    </div>
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    tbody.innerHTML =
+        prestamos.map(
+            prestamo => {
+
+                const cliente =
+                    prestamo.clientes;
+
+
+                const nombre =
+                    cliente
+                        ? `${cliente.nombre || ""} ${cliente.apellido || ""}`
+                        : "Cliente";
+
+
+                return `
+
+                    <tr>
+
+                        <td>
+                            <strong>
+                                ${escapeHTML(nombre)}
+                            </strong>
+                        </td>
+
+                        <td>
+                            ${formatearPesos(
+                                prestamo.capital
+                            )}
+                        </td>
+
+                        <td>
+                            ${prestamo.cantidad_cuotas}
+                            ${escapeHTML(
+                                prestamo.frecuencia || ""
+                            )}
+                        </td>
+
+                        <td>
+                            ${formatearPesos(
+                                prestamo.total_devolver
+                            )}
+                        </td>
+
+                        <td style="color:#166534;font-weight:700">
+                            ${escapeHTML(
+                                prestamo.estado || "activo"
+                            )}
+                        </td>
+
+                    </tr>
+
+                `;
+
+            }
+        ).join("");
+
+}
 
 
 /* =========================================================
